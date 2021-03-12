@@ -2,8 +2,15 @@ from termcolor import colored
 import os
 from msvcrt import getch
 
+def createLogMessage(msg):
+	print(colored("[ LOG ] ", "green") + f"{msg}")
+
+def createWarningMessage(msg):
+	print(colored(f"[ WARNING ] ", "yellow") +  f"{msg}")
+
 def createErrorMessage(msg):
-	print(colored(f"ERROR: {msg}", "red"))
+	print(colored(f"[ ERROR ] ", "red") + f"{msg}")
+
 
 def createHelpText(template):
 	# Displays a help message from a template 
@@ -33,7 +40,17 @@ def waitForKey(key):
 		else:
 			continue
 
+def askYesNo(msg="Are you sure?: ", affirmation="y", negative="n", displayOption=True):
+	while True:
+		response = input(msg + (f"[{affirmation.upper()}/{negative.upper()}]" if displayOption else ""))
+		if affirmation.lower() == response.lower():
+			return True
 
+		elif negative.lower() == response.lower():
+			return False
+
+		else:
+			continue
 
 def parseArgs(target):
 	pars = [] # Essential

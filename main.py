@@ -2,28 +2,34 @@
 from lib import *
 
 # External imports (misc)
-from json import loads, dumps
+from json import loads, dumps, JSONDecodeError
 import os
+import subprocess
 from shutil import rmtree
 from datetime import datetime as dt
+from getpass import getuser
+import sys
+import traceback
 
 # Colors in the terminal
 from termcolor import colored
 from colorama import init
 init()
 
-if True:
-	pass
-
+# Header
+__version__ = 0.3
 
 # Variables
 VARIABLES = {}
 COMMANDS = {} # These are the built-in commands
-ADDON_COMMANDS = {}
+ADDON_COMMANDS = {"addons":{}}
+ADDON_DIRECTORY = f"C:\\Users\\{getuser()}\\.lakeShellAddons"
+ADDON_FILE = f"C:\\Users\\{getuser()}\\.lakeShellAddons\\.addon_config.json"
+
 
 
 # CLI functions
-print("""
+print(f"""
  ___      _______  ___   _  _______  _______  __   __  _______  ___      ___     
 |   |    |   _   ||   | | ||       ||       ||  | |  ||       ||   |    |   |    
 |   |    |  |_|  ||   |_| ||    ___||  _____||  |_|  ||    ___||   |    |   |    
@@ -31,7 +37,7 @@ print("""
 |   |___ |       ||     |_ |    ___||_____  ||       ||    ___||   |___ |   |___ 
 |       ||   _   ||    _  ||   |___  _____| ||   _   ||   |___ |       ||       |
 |_______||__| |__||___| |_||_______||_______||__| |__||_______||_______||_______|
-v0.1 (Beta version)
+v{__version__}
 """)
 
 
@@ -86,7 +92,7 @@ def listdir(args):
 
 	for directory in targetFolders:
 		if not os.path.isdir(directory):
-			print("The path specified doesn't exist: '{directory}'")
+			createErrorMessage(f"The path specified doesn't exist: '{directory}'")
 			continue
 	
 		print(f"Showing content of '{directory}'")
@@ -365,6 +371,31 @@ def removeFile(args):
 				createErrorMessage(f"The file '{file}' cannot be removed, probably because of permission issues.")
 
 
+def refreshAddons(args):
+	# This function reads the addon configuration file
+	global ADDON_COMMANDS
+	if not os.path.isfile(ADDON_FILE):
+		createErrorMessage(f"The addon configuration file doesn't exist. '{ADDON_FILE}'")
+		print(f"Creating an empty version of it...")
+		
+		# The directory doesn't exist either
+		if not os.path.isdir(ADDON_DIRECTORY):
+			os.mkdir(ADDON_DIRECTORY)
+			print("The addons directory wasn't found, so it will be created as well.")
+
+		open(ADDON_FILE, "w").write("{}") # Empty file
+
+	else:
+		try:
+			print(f"Reading addon configuration file in location {ADDON_FILE}...")
+			ADDON_COMMANDS = loads(open(ADDON_FILE, "r").read())
+			print(f"Addon configuration updated.")
+
+		except JSONDecodeError:
+			createErrorMessage("The configuration file its corrupted.")
+
+			if askYesNo("Do you want to clear the addon configuration file?"):
+				open(ADDON_FILE, "w").write("{}")
 
 
 def printWorkingDirectory(args):
@@ -372,7 +403,7 @@ def printWorkingDirectory(args):
 
 	if "help" in opts:
 		createHelpText({
-			"description":"Shows information about the current working directory.",
+			"description":"Shows information about the current working directory or the ones specified.",
 			"usage":{
 				"pwd":"Prints current directory.",
 				"pwd <directory>":"Prints information about <directory>",
@@ -393,12 +424,54 @@ def printWorkingDirectory(args):
 			for i in p.replace("\\", "/").split("/"):
 				print(f"\t\t{i}")
 
+			# It's not a path
+			if not "/" in p and not "\\" in p and not os.path.isdir(p):
+				print("\n\tThis doesn't look like a path.")
+
 	else:
 		print(os.getcwd())
 
+def addonTools(args):
+	pars, opts = parseArgs(args)
+
+	if not "tool" in opts or "help" in opts:
+		createHelpText({
+			"description":"Tool for addons management.",
+			"usage":{
+				"addontool --tool:install <installfile>":"Installs the addon specified in the install file."
+			}
+		})
+		return 
+
+	createLogMessage("Importing addon tools module...")
+	try:
+		import addontool
+	except:
+		createErrorMessage("Cannot import the install module.")
+	createLogMessage(f"* Addon tools manager version detected: '{addontool.__version__}'")
 
 
-		
+	# Select the tool
+
+	if "install" == opts["tool"]:
+		if pars == []:
+			createErrorMessage("You must specify at least one file to install.")
+			return
+
+		else:
+			for f in pars:
+				createBoxTitle(f"Starting installation for install file '{f}'")
+				addontool.install(ADDON_FILE, f)
+
+	# remove
+	# list
+
+
+	del addontool
+
+
+
+
 
 # update the COMMANDS variable
 #       alias -- function
@@ -411,14 +484,22 @@ COMMANDS["mkdir"] = createDirectory
 COMMANDS["rmdir"] = removeDirectory
 COMMANDS["pwd"] = printWorkingDirectory
 COMMANDS["remove"] = removeFile
+COMMANDS["refresh"] = refreshAddons
+COMMANDS["addontool"] = addonTools
 
 
 def main():
+	print(f"""
+ * Machine's operative system: {sys.platform}
+ * Current user:               {getuser()}
+ * Python version:             {sys.version}
+ * Shell version:              {__version__}
+	""")
 	while True:
 		try:
-			userinput = parseSyntax(input(f"{os.getcwd()}# "))
+			userinput = parseSyntax(input(f"[ {getuser().upper()} ]{os.getcwd()}# "))
 		except KeyboardInterrupt:
-			exit("Shell closed manually.")
+			exit("\nShell closed manually.")
 
 		# No input into the console
 		if userinput == []:
@@ -426,21 +507,27 @@ def main():
 
 		# Decide what to do with the input
 		else:
+
 			command = userinput[0]
 			args = [] if len(userinput) == 0 else userinput[1:]
 
-			if command not in COMMANDS and command not in ADDON_COMMANDS:
+			# The command doesn't exist
+			if command not in COMMANDS and command not in ADDON_COMMANDS["addons"]:
 				print(f"'{command}' its not related to any command.")
 
 			else:
+				# Builtin command
 				if command in COMMANDS:
 					try:
 						COMMANDS[command](args)
 					except Exception as e:
 						createErrorMessage(f"Exception triggered in built-in command.\nException: '{e}'")
+
+				# Addon commands
 				else:
 					try:
-						ADDONS_COMMANDS[command](args)
+						# Executes the command in the folder of the addon.
+						subprocess.Popen(ADDON_COMMANDS["addons"][command]["entryCommand"], cwd=os.path.join(ADDON_DIRECTORY, command), shell=True)
 					except Exception as e:
 						createErrorMessage(f"Exception triggered in addon's command.\nException: '{e}'")
 
