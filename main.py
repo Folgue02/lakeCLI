@@ -30,18 +30,53 @@ ADDON_FILE = f"C:\\Users\\{getuser()}\\.lakeShellAddons\\.addon_config.json"
 
 # CLI functions
 print(f"""
- ___      _______  ___   _  _______  _______  __   __  _______  ___      ___     
-|   |    |   _   ||   | | ||       ||       ||  | |  ||       ||   |    |   |    
-|   |    |  |_|  ||   |_| ||    ___||  _____||  |_|  ||    ___||   |    |   |    
-|   |    |       ||      _||   |___ | |_____ |       ||   |___ |   |    |   |    
-|   |___ |       ||     |_ |    ___||_____  ||       ||    ___||   |___ |   |___ 
-|       ||   _   ||    _  ||   |___  _____| ||   _   ||   |___ |       ||       |
-|_______||__| |__||___| |_||_______||_______||__| |__||_______||_______||_______|
+    __          __       _____ __         ____
+   / /   ____ _/ /_____ / ___// /_  ___  / / /
+  / /   / __ `/ //_/ _ \\\\__ \\/ __ \\/ _ \\/ / / 
+ / /___/ /_/ /  < /  __/__/ / / / /  __/ / /  
+/_____/\\__,_/_/|_|\\___/____/_/ /_/\\___/_/_/   
+                                              
 v{__version__}
 """)
 
 
-# Builtin commands
+# Execute a line
+def executeLine(line):
+	userinput = parseSyntax(line)
+
+	# No input into the console
+	if userinput == []:
+		return
+
+	# Decide what to do with the input
+	else:
+
+		command = userinput[0]
+		args = [] if len(userinput) == 0 else userinput[1:]
+
+		# The command doesn't exist
+		if command not in COMMANDS and command not in ADDON_COMMANDS["addons"]:
+			print(f"'{command}' its not related to any command.")
+
+		else:
+			# Builtin command
+			if command in COMMANDS:
+				try:
+					COMMANDS[command](args)
+				except Exception as e:
+					createErrorMessage(f"Exception triggered in built-in command.\nException: '{e}'")
+
+			# Addon commands
+			else:
+				try:
+					# Executes the command in the folder of the addon.
+					subprocess.Popen(ADDON_COMMANDS["addons"][command]["entryCommand"], cwd=os.path.join(ADDON_DIRECTORY, command), shell=True)
+				except Exception as e:
+					createErrorMessage(f"Exception triggered in addon's command.\nException: '{e}'")
+
+
+
+#builtin commands
 def changedir(args):
 	if args == []:
 		print(os.getcwd())
@@ -383,7 +418,7 @@ def refreshAddons(args):
 			os.mkdir(ADDON_DIRECTORY)
 			print("The addons directory wasn't found, so it will be created as well.")
 
-		open(ADDON_FILE, "w").write("{}") # Empty file
+		open(ADDON_FILE, "w").write("{\"addons\":{}}") # Empty file
 
 	else:
 		try:
@@ -438,7 +473,9 @@ def addonTools(args):
 		createHelpText({
 			"description":"Tool for addons management.",
 			"usage":{
-				"addontool --tool:install <installfile>":"Installs the addon specified in the install file."
+				"addontool --tool:install <installfile>":"Installs the addon specified in the install file.",
+				"addontool --tool:remove <addon>":"Removes the <addon> from the installed addons (includes its installation folder).",
+				"addontool --tool:list":"Lists the installed addons."
 			}
 		})
 		return 
@@ -446,8 +483,10 @@ def addonTools(args):
 	createLogMessage("Importing addon tools module...")
 	try:
 		import addontool
-	except:
-		createErrorMessage("Cannot import the install module.")
+	except Exception as e:
+		createErrorMessage("Cannot import the install module due to the following reason:")
+		createErrorMessage(e)
+		return
 	createLogMessage(f"* Addon tools manager version detected: '{addontool.__version__}'")
 
 
@@ -462,10 +501,21 @@ def addonTools(args):
 			for f in pars:
 				createBoxTitle(f"Starting installation for install file '{f}'")
 				addontool.install(ADDON_FILE, f)
+	# list
+	elif "list" == opts["tool"]:
+		addontool.list(ADDON_FILE)
 
 	# remove
-	# list
+	elif "uninstall" == opts["tool"] or "remove" == opts["tool"]:
+		if pars == []:
+			createErrorMessage("You must specify an addon to uninstall.")
 
+		else:
+			for p in pars:
+				addontool.uninstall(ADDON_FILE, p)
+
+	else:
+		createErrorMessage(f"Unknown tool: '{opts['tool']}'")
 
 	del addontool
 
@@ -497,40 +547,11 @@ def main():
 	""")
 	while True:
 		try:
-			userinput = parseSyntax(input(f"[ {getuser().upper()} ]{os.getcwd()}# "))
+			userinput = input(f"[ {getuser().upper()} ]{os.getcwd()}# ")
 		except KeyboardInterrupt:
 			exit("\nShell closed manually.")
 
-		# No input into the console
-		if userinput == []:
-			continue
-
-		# Decide what to do with the input
-		else:
-
-			command = userinput[0]
-			args = [] if len(userinput) == 0 else userinput[1:]
-
-			# The command doesn't exist
-			if command not in COMMANDS and command not in ADDON_COMMANDS["addons"]:
-				print(f"'{command}' its not related to any command.")
-
-			else:
-				# Builtin command
-				if command in COMMANDS:
-					try:
-						COMMANDS[command](args)
-					except Exception as e:
-						createErrorMessage(f"Exception triggered in built-in command.\nException: '{e}'")
-
-				# Addon commands
-				else:
-					try:
-						# Executes the command in the folder of the addon.
-						subprocess.Popen(ADDON_COMMANDS["addons"][command]["entryCommand"], cwd=os.path.join(ADDON_DIRECTORY, command), shell=True)
-					except Exception as e:
-						createErrorMessage(f"Exception triggered in addon's command.\nException: '{e}'")
-
+		executeLine(userinput)
 
 
 
