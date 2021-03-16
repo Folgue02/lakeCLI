@@ -595,7 +595,7 @@ def main():
  * Python version:             {sys.version}
  * Shell version:              {__version__}
 	""")
-	pars, opts = parseArgs(sys.args)
+	pars, opts = parseArgs(sys.argv)
 	
 	if "no-ctrlc" in opts:
 		noCtrlc = True
