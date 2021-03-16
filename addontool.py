@@ -5,14 +5,17 @@ import shutil
 from prettytable import PrettyTable as pt
 __version__ = 0.2
 
-
+# Contains the essential properties for a installer file
 TEMPLATE = {
 	"referenceCommand":str,
 	"files":dict,
 	"directories":list,
-	"entryCommand":str,
+	"entryFile":str,
 	"version":float
 }
+
+
+
 
 def install(addonFile, installFile):
 	validConfigurationFile = True
@@ -94,11 +97,12 @@ def install(addonFile, installFile):
 					createErrorMessage(f"A file couldn't be copied due to the following reason: '{e}'")
 					createErrorMessage("Cancelling installation...")
 					return
-
+					
+			
 			# replace the addon configuration file with the new addon
 			currentConfig["addons"][installInfo["referenceCommand"]]= {
-				"entryCommand":installInfo["entryCommand"],
-				"help":{} if not "help" in installFile else installFile["help"],
+				"entryFile":installInfo["entryFile"],
+				"help":{} if not "help" in installInfo else  installInfo["help"],
 				"version":installInfo["version"]
 			}
 
@@ -112,6 +116,32 @@ def install(addonFile, installFile):
 
 			createLogMessage(f"The addon '{installInfo['referenceCommand']} has been installed succesfully.'")
 
+			
+def getHelp(addonFile, targetAddon):
+	# Read the configuration file
+	if not os.path.isfile(addonFile):
+		createErrorMessage("The addon configuration file doesn't exist.")
+	
+	else:
+		# find the addon
+		try:
+			addonConfig = loads(open(addonFile, "r").read())
+		except Exception as e:
+			createErrorMessage(f"The addon configuration file couldn't be read due to the following reason: {e}")
+			return
+		
+		if not targetAddon in addonConfig["addons"]:
+			createErrorMessage(f"Couldn't find the addon specified. ('{targetAddon}')")
+			
+		else:
+			if addonConfig["addons"][targetAddon]["help"] == {}:
+				createWarningMessage("No help found for this addon.")
+			
+			else:
+				helpContent = addonConfig["addons"][targetAddon]["help"]
+				createHelpText(helpContent)
+		
+	
 
 def uninstall(addonFile, targetAddon):
 	# Read the addon configuration file
@@ -178,8 +208,8 @@ def list(addonFile):
 		createBoxTitle("Showing all addons installed...")
 
 		p = pt()
-		p.field_names = ["Reference command", "Version", "Entry command"]
+		p.field_names = ["Reference command", "Version", "Entry file"]
 		for a in currentConfig["addons"]:
-			p.add_row([a, currentConfig["addons"][a]["version"], currentConfig["addons"][a]["entryCommand"]])
+			p.add_row([a, currentConfig["addons"][a]["version"], currentConfig["addons"][a]["entryFile"]])
 
 		print(p)

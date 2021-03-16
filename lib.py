@@ -65,11 +65,8 @@ def parseArgs(target):
 			else:
 				opts[i[2:]] = None
 
-
-
 		else:
 			pars.append(i)
-
 
 	return pars, opts
 

@@ -1,4 +1,5 @@
 # Imports of the same project
+
 from lib import *
 
 # External imports (misc)
@@ -10,14 +11,18 @@ from datetime import datetime as dt
 from getpass import getuser
 import sys
 import traceback
-
+from time import ctime
 # Colors in the terminal
 from termcolor import colored
 from colorama import init
 init()
 
+# Tables
+from prettytable import PrettyTable as pt
+
+
 # Header
-__version__ = 0.3
+__version__ = 0.5
 
 # Variables
 VARIABLES = {}
@@ -34,8 +39,7 @@ print(f"""
    / /   ____ _/ /_____ / ___// /_  ___  / / /
   / /   / __ `/ //_/ _ \\\\__ \\/ __ \\/ _ \\/ / / 
  / /___/ /_/ /  < /  __/__/ / / / /  __/ / /  
-/_____/\\__,_/_/|_|\\___/____/_/ /_/\\___/_/_/   
-                                              
+/_____/\\__,_/_/|_|\\___/____/_/ /_/\\___/_/_/                                                
 v{__version__}
 """)
 
@@ -46,7 +50,11 @@ def executeLine(line):
 
 	# No input into the console
 	if userinput == []:
-		return
+		pass
+
+	elif userinput[0].startswith("#"):
+		pass
+
 
 	# Decide what to do with the input
 	else:
@@ -70,11 +78,13 @@ def executeLine(line):
 			else:
 				try:
 					# Executes the command in the folder of the addon.
-					subprocess.Popen(ADDON_COMMANDS["addons"][command]["entryCommand"], cwd=os.path.join(ADDON_DIRECTORY, command), shell=True)
+					os.system(os.path.join(ADDON_DIRECTORY, command, ADDON_COMMANDS["addons"][command]["entryFile"]) + " " + " ".join(args))
+
 				except Exception as e:
 					createErrorMessage(f"Exception triggered in addon's command.\nException: '{e}'")
 
-
+	
+	
 
 #builtin commands
 def changedir(args):
@@ -108,8 +118,7 @@ def listdir(args):
 			"description":"Shows the content of a directory (if nothing its specified it will show the content of the current working directory.)",
 			"usage":{
 				"ls <dir>":"Lists the content of <dir>",
-				"ls --no-file / --no-dir":"Lists the content of the diretory except for what has been specified",
-				"ls --complex":"Shows the content of the folder and creation dates."
+				"ls --no-file / --no-dir":"Lists the content of the diretory except for what has been specified"
 			}
 		})
 		return
@@ -120,11 +129,7 @@ def listdir(args):
 	if "no-file" in opts:
 		noFile = True
 
-	if "complex" in opts:
-		complexMode = True
-
 	# Execution time
-
 	for directory in targetFolders:
 		if not os.path.isdir(directory):
 			createErrorMessage(f"The path specified doesn't exist: '{directory}'")
@@ -147,23 +152,24 @@ def listdir(args):
 		# Dirs
 		if files != [] and not noFile:
 			print("--------- FILES ---------")
-			for file in files:
-				if not complexMode: 
-					print(f"\t{file}")
+			p = pt()
+			p.field_names = ["File name", "File size", "Creation date"]
+			for f in files:
+				p.add_row([f, f"{os.path.getsize(os.path.join(directory, f)) / 1000000} KB", ctime(os.path.getctime(os.path.join(directory, f)))])
+			
+			print(p)
 
-				else:# Do the complex mode here
-					pass
-
+			
 		if dirs != [] and not noDir:
 			print("\n--------- DIRS ----------")
-			for folder in dirs:
-				if not complexMode: 
-					print(f"\t{folder}")
-
-				else:# Do the complex mode here
-					pass
-
-
+			
+			p = pt()
+			p.field_names = ["Directory name", "Number of elements", "Creation date"]
+			for d in dirs:
+				p.add_row([d, len(os.listdir(d)), ctime(os.path.getctime(os.path.join(directory, d)))])
+															
+			print(p)
+																
 def executeConsoleCommand(args):
 	pars, opts = parseArgs(args)
 	debuggingMode = False
@@ -174,6 +180,7 @@ def executeConsoleCommand(args):
 			"usage":{
 				"x <command> <arg>":"Executes <command> with the args <args>",
 				"x <command> \"<command1> <args>\" --all-commands":"Executes <command>, and then <command1> with <args> as arguments.",
+				"x <command> --debug":"Executes the command in debugging mode."
 			}
 		})
 
@@ -188,7 +195,11 @@ def executeConsoleCommand(args):
 	for com in pars:
 		print(f"{25*'-'}\nExecuting command '{com}'...\n{25*'-'}") if debuggingMode else None
 		startingTime = dt.now().day*24*3600 + dt.now().hour*3600 + dt.now().minute*60 + dt.now().second 
-		returnCode = os.system(com)
+		try:
+			returnCode = os.system(com)
+		except KeyboardInterrupt:
+			returnCode = 1
+
 		endTime = dt.now().day*24*3600 + dt.now().hour*3600 + dt.now().minute*60 + dt.now().second 
 		
 		print(f"{25*'-'}\nCommand's return code: '{returnCode}'\nCommand's running time: {(endTime-startingTime)//3600}:{(endTime-startingTime)//60}:{(endTime-startingTime)%60}\n{25*'-'}") if debuggingMode else None
@@ -249,15 +260,25 @@ def readFile(args):
 			print(f"{20*'-'} START OF FILE '{file}'")
 
 
+
 			# Print the content
 			if pauseMode:
 				h = os.get_terminal_size()[1] 
 				content = open(file, "r").read().split("\n")
+				# In case that the file is smaller than the screen
+
+				if len(content)// h == 0:
+					print(open(file, "r").read())
+					print(f"\n{20*'-'} END OF FILE '{file}'")
+					return
+
 				for index, line in enumerate(content):
-					if index % (len(content) //(len(content) // h)) == 0:
-						print(f"(Page {0 if index == 0 else  index // h}/{len(content)// h})<Enter>:", end="")
-						waitForKey("\r")
-						print(" "*len(f"(Page {0 if index == 0 else  index // h}/{len(content)// h})<Enter>:"), end="\r")
+
+
+					if index % (len(content) //(len(content) // h)) == 0: 
+						print(f"(Page {0 if index == 0 else index // h}/{len(content)// h})<Enter>:", end="")
+						waitForKey("\r") # Press enter
+						print(" "*len(f"(Page {0 if index == 0 else  index // h}/{len(content)// h})<Enter>:"), end="\r")# clean the line
 						print("\r" + line)
 						continue
 
@@ -475,7 +496,8 @@ def addonTools(args):
 			"usage":{
 				"addontool --tool:install <installfile>":"Installs the addon specified in the install file.",
 				"addontool --tool:remove <addon>":"Removes the <addon> from the installed addons (includes its installation folder).",
-				"addontool --tool:list":"Lists the installed addons."
+				"addontool --tool:list":"Lists the installed addons.",
+				"addontool --tool:help <addon>":"Shows the help of the addon specified."
 			}
 		})
 		return 
@@ -514,13 +536,38 @@ def addonTools(args):
 			for p in pars:
 				addontool.uninstall(ADDON_FILE, p)
 
+	elif "help" == opts["tool"]:
+		if pars == []:
+			createErrorMessage("You must specify the addon.")
+		
+		else:
+			addontool.getHelp(ADDON_FILE, pars[0])
+				
 	else:
 		createErrorMessage(f"Unknown tool: '{opts['tool']}'")
 
 	del addontool
 
 
+def runScript(args):
+	pars, opts = parseArgs(args)
 
+	if pars == [] or "help" in opts:
+		createHelpText({
+			"description":"Executes a script file.",
+			"usage":{
+				"run <scriptfile>":"Runs <scriptfile>"
+			}
+		})
+
+	else:
+		if not os.path.isfile(pars[0]):
+			createErrorMessage(f"The specified file to execute doesn't exist. ('{pars[0]}')")
+
+		else:
+			# Read the file
+			for line in open(pars[0], "r").read().split("\n"):
+				executeLine(line)
 
 
 # update the COMMANDS variable
@@ -536,6 +583,9 @@ COMMANDS["pwd"] = printWorkingDirectory
 COMMANDS["remove"] = removeFile
 COMMANDS["refresh"] = refreshAddons
 COMMANDS["addontool"] = addonTools
+COMMANDS["at"] = addonTools
+COMMANDS["run"] = runScript
+COMMANDS["echo"] = lambda x: [print(t) for t in x]
 
 
 def main():
@@ -545,11 +595,20 @@ def main():
  * Python version:             {sys.version}
  * Shell version:              {__version__}
 	""")
+	pars, opts = parseArgs(sys.args)
+	
+	if "no-ctrlc" in opts:
+		noCtrlc = True
+	
 	while True:
 		try:
-			userinput = input(f"[ {getuser().upper()} ]{os.getcwd()}# ")
+			bs = "\\"
+			userinput = input(f"{colored('[ '+getuser().upper() + ' ]', 'green', 'on_blue')} {'/' if len(os.getcwd().replace(bs, '/').split('/')) == 1 else '/'.join(os.getcwd().replace(bs,'/').split('/')[1:])}# ")
 		except KeyboardInterrupt:
-			exit("\nShell closed manually.")
+			if noCtrlc:
+				print("^C")
+			else:
+				exit("\nShell closed manually.")
 
 		executeLine(userinput)
 
