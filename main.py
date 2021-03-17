@@ -28,18 +28,19 @@ __version__ = 0.5
 VARIABLES = {}
 COMMANDS = {} # These are the built-in commands
 ADDON_COMMANDS = {"addons":{}}
-ADDON_DIRECTORY = f"C:\\Users\\{getuser()}\\.lakeShellAddons"
-ADDON_FILE = f"C:\\Users\\{getuser()}\\.lakeShellAddons\\.addon_config.json"
+ADDON_DIRECTORY = f"C:\\Users\\{getuser()}\\.lakeCLIAddons"
+ADDON_FILE = f"C:\\Users\\{getuser()}\\.lakeCLIAddons\\.addon_config.json"
 
 
 
 # CLI functions
 print(f"""
-    __          __       _____ __         ____
-   / /   ____ _/ /_____ / ___// /_  ___  / / /
-  / /   / __ `/ //_/ _ \\\\__ \\/ __ \\/ _ \\/ / / 
- / /___/ /_/ /  < /  __/__/ / / / /  __/ / /  
-/_____/\\__,_/_/|_|\\___/____/_/ /_/\\___/_/_/                                                
+    __          __        ________    ____
+   / /   ____ _/ /_____  / ____/ /   /  _/
+  / /   / __ `/ //_/ _ \\/ /   / /    / /  
+ / /___/ /_/ / ,< /  __/ /___/ /____/ /   
+/_____/\\__,_/_/|_|\\___/\\____/_____/___/   
+                                          
 v{__version__}
 """)
 
@@ -593,7 +594,7 @@ def main():
  * Machine's operative system: {sys.platform}
  * Current user:               {getuser()}
  * Python version:             {sys.version}
- * Shell version:              {__version__}
+ * CLI version:                {__version__}
 	""")
 	pars, opts = parseArgs(sys.argv)
 	
