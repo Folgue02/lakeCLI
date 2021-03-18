@@ -12,6 +12,9 @@ from getpass import getuser
 import sys
 import traceback
 from time import ctime
+import ctypes
+
+
 # Colors in the terminal
 from termcolor import colored
 from colorama import init
@@ -23,6 +26,15 @@ from prettytable import PrettyTable as pt
 
 # Header
 __version__ = 0.5
+__author__ = "Folgue02"
+
+# Init variables
+INIT_VARIABLES = {
+	"no-ctrlc":False, # If set to true, disables the ability of closing the CLI by pressing Ctrl + C
+	"starting-directory":"." #Sets the directory where the shell its going to start.
+	
+}
+
 
 # Variables
 VARIABLES = {}
@@ -140,7 +152,11 @@ def listdir(args):
 		dirElements = os.listdir(directory)
 		files = []
 		dirs = []
+		# Table to display
+		table = pt()
+		table.field_names = ["Name", "Size", "Creation date", "Attributes"]
 
+		# Separates the folders from the files
 		for element in dirElements:
 			if os.path.isdir(os.path.abspath(os.path.join(directory, element))):
 				dirs.append(element)
@@ -148,28 +164,16 @@ def listdir(args):
 			else:
 				files.append(element)
 
-		# im not doing the complexMode yet
-
 		# Dirs
 		if files != [] and not noFile:
-			print("--------- FILES ---------")
-			p = pt()
-			p.field_names = ["File name", "File size", "Creation date"]
 			for f in files:
-				p.add_row([f, f"{os.path.getsize(os.path.join(directory, f)) / 1000000} KB", ctime(os.path.getctime(os.path.join(directory, f)))])
-			
-			print(p)
-
+				table.add_row([f, f"{os.path.getsize(os.path.join(directory, f)) / 1000000} KB", ctime(os.path.getctime(os.path.join(directory, f))), getFileAttribs(os.path.join(directory, f))])
 			
 		if dirs != [] and not noDir:
-			print("\n--------- DIRS ----------")
-			
-			p = pt()
-			p.field_names = ["Directory name", "Number of elements", "Creation date"]
 			for d in dirs:
-				p.add_row([d, len(os.listdir(d)), ctime(os.path.getctime(os.path.join(directory, d)))])
-															
-			print(p)
+				table.add_row([d, "<FOLDER>", ctime(os.path.getctime(os.path.join(directory, d))), getFileAttribs(os.path.join(directory, d))])
+		
+		print(table)
 																
 def executeConsoleCommand(args):
 	pars, opts = parseArgs(args)
@@ -483,7 +487,7 @@ def printWorkingDirectory(args):
 
 			# It's not a path
 			if not "/" in p and not "\\" in p and not os.path.isdir(p):
-				print("\n\tThis doesn't look like a path.")
+				print(colored("\n\tThis doesn't look like a path.", "red"))
 
 	else:
 		print(os.getcwd())
@@ -501,7 +505,7 @@ def addonTools(args):
 				"addontool --tool:help <addon>":"Shows the help of the addon specified."
 			}
 		})
-		return 
+		return
 
 	createLogMessage("Importing addon tools module...")
 	try:
@@ -587,7 +591,7 @@ COMMANDS["addontool"] = addonTools
 COMMANDS["at"] = addonTools
 COMMANDS["run"] = runScript
 COMMANDS["echo"] = lambda x: [print(t) for t in x]
-
+COMMANDS["exit"] = lambda x: [exit(0)]
 
 def main():
 	print(f"""
@@ -598,16 +602,50 @@ def main():
 	""")
 	pars, opts = parseArgs(sys.argv)
 	
-	if "no-ctrlc" in opts:
-		noCtrlc = True
+	# Parse the commandline arguments
+	# Loop through all the arguments specified
+	for argument in opts:
+		# in case that it is an initializing variable
+		if argument in INIT_VARIABLES:
+		
+			# It must contain a value
+			if opts[argument] == None:
+				createErrorMessage(f"You must specify a value for the variable specified. ('{argument}')")
+				
+			else:
+				INIT_VARIABLES[argument] = opts[argument]
+		
+		# Rest of settings
+		else:
+			# So far this is empty
+			pass
 	
+			
+	# Initializiation
+	
+	# Directory where the CLI will be started
+	os.chdir(INIT_VARIABLES["starting-directory"])
+	
+	
+	
+	# Main loop	
 	while True:
 		try:
-			bs = "\\"
-			userinput = input(f"{colored('[ '+getuser().upper() + ' ]', 'green', 'on_blue')} {'/' if len(os.getcwd().replace(bs, '/').split('/')) == 1 else '/'.join(os.getcwd().replace(bs,'/').split('/')[1:])}# ")
+			userPrompt = f"[ {getuser().upper()} ]"
+			pathPrompt = os.getcwd().replace("\\", "/").upper()[2:]
+
+			if ctypes.windll.shell32.IsUserAnAdmin():
+				userPrompt = f"[ ADMIN ]"
+
+			else:
+				pass
+
+			userinput = input(userPrompt + pathPrompt + "# ")
 		except KeyboardInterrupt:
-			if noCtrlc:
+			if INIT_VARIABLES["no-ctrlc"]:
 				print("^C")
+				userinput = "" # Empty the userinput variable instead of parsing it in.
+			
 			else:
 				exit("\nShell closed manually.")
 

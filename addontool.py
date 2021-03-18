@@ -3,7 +3,7 @@ from lib import *
 import os
 import shutil
 from prettytable import PrettyTable as pt
-__version__ = 0.2
+__version__ = 1.0
 
 # Contains the essential properties for a installer file
 TEMPLATE = {

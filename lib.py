@@ -1,7 +1,8 @@
 from termcolor import colored
 import os
 from msvcrt import getch
-
+import win32api as w
+import win32con as wc
 def createLogMessage(msg):
 	print(colored("[ LOG ] ", "green") + f"{msg}")
 
@@ -27,10 +28,7 @@ def createHelpText(template):
 			print("\t\t" + template["usage"][example]+ "\n")
 
 def createBoxTitle(msg):
-	print("+-"+ "-"*len(msg)+ "-+")
-	print(f"| {msg} |")
-	print("+-"+ "-"*len(msg)+ "-+")
-
+	print(f"========== {msg} ==========")
 def waitForKey(key):
 	while True:
 		char = getch().decode("utf-8")
@@ -108,7 +106,28 @@ def parseSyntax(target):
 
 	return result
 
+def getFileAttribs(targetFile):
+	targetAttribs = w.GetFileAttributes(targetFile)
 
+	attribs = {
+	wc.FILE_ATTRIBUTE_DIRECTORY:"D",
+	wc.FILE_ATTRIBUTE_ARCHIVE:"A",
+	wc.FILE_ATTRIBUTE_HIDDEN:"H",
+	wc.FILE_ATTRIBUTE_SYSTEM:"S",
+	wc.FILE_ATTRIBUTE_READONLY:"R"
+	}
+	result = ""
+	for a in attribs:
+		if a & targetAttribs:
+			result += attribs[a]
+		
+		else:
+			result += "-"
+													
+	return result
+											
+	
+	
 
 if __name__ == "__main__":
 	createBoxTitle("PURE SHIT")
