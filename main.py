@@ -13,7 +13,7 @@ import sys
 import traceback
 from time import ctime
 import ctypes
-
+import shutil
 
 # Colors in the terminal
 from termcolor import colored
@@ -548,11 +548,76 @@ def addonTools(args):
 		else:
 			addontool.getHelp(ADDON_FILE, pars[0])
 				
+
+	elif "guide" == opts["tool"]:
+		addontool.guide(pars)
+								
+	
 	else:
 		createErrorMessage(f"Unknown tool: '{opts['tool']}'")
 
+		
 	del addontool
 
+
+def copyFile(args):
+	pars, opts = parseArgs(args)
+	
+	if "help" in opts or pars == []:
+		createHelpMessage({
+			"description":"Copies files into a destiny.",
+			"usage":{
+				"copyf <file1> <destiny>":"Copies <file1> to <destiny>",
+				"copyf <file1> <destiny>":"Copies <file1> to <destiny> even if <destiny> already exists."
+			}
+		})
+		
+	elif len(pars) != 2:
+		createErrorMessage("You must specify only two arguments, the file to copy, and its destiny.")
+		
+	else:
+		# File doesn't exist
+		if not os.path.isfile(pars[0]):
+			createErrorMessage(f"Cannot copy file '{oars[0]}', file not found.")
+				
+		else:
+			# Read content of file and then write it into the destiny.
+			binContent = open(pars[0], "rb").read()
+				
+			# Destiny file exists
+			if os.path.isfile(pars[1]) and not "overwrite" in opts:
+				createErrorMessage(f"Cannot copy '{pars[0]}' into '{pars[1]}' because the file already exists. (Use \"--overwrite\" to avoid this error.)")
+			
+			# Write the content of the file
+			else:
+				open(pars[1], "wb").write(binContent)
+
+				
+	
+def copyDirectory(args):
+	pars, opts = parseArgs(args)
+
+	if "help" in opts or pars == []:
+		createHelpText({
+			"description":"Copies a directory (includes its child directories and files) into a destiny.",
+			"usage":{
+				"copyd <directory> <destiny>":"Copies <directory> to <destiny>."
+			}
+		})
+		
+	
+	elif len(pars) != 2:
+		createErrorMessage("You must specify only two arguments, the directory to copy and its destiny.")
+			
+	else:
+		if not os.path.isdir(pars[0]):
+			createErrorMessage(f"Cannot copy folder '{pars[0]}', folder not found.")
+			
+		else:
+			shutil.copytree(pars[0], pars[1])
+				
+	
+	
 
 def runScript(args):
 	pars, opts = parseArgs(args)
@@ -590,6 +655,8 @@ COMMANDS["refresh"] = refreshAddons
 COMMANDS["addontool"] = addonTools
 COMMANDS["at"] = addonTools
 COMMANDS["run"] = runScript
+COMMANDS["copyf"]= copyFile
+COMMANDS["copyd"]= copyDirectory
 COMMANDS["echo"] = lambda x: [print(t) for t in x]
 COMMANDS["exit"] = lambda x: [exit(0)]
 
@@ -640,7 +707,7 @@ def main():
 			else:
 				pass
 
-			userinput = input(userPrompt + pathPrompt + "# ")
+			userinput = input(colored(userPrompt, on_color="on_green") + pathPrompt + "# ")
 		except KeyboardInterrupt:
 			if INIT_VARIABLES["no-ctrlc"]:
 				print("^C")

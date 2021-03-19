@@ -14,6 +14,27 @@ TEMPLATE = {
 	"version":float
 }
 
+def guide(requestedGuides):
+	guides = {
+		"install":os.path.split(__file__)[0]+"/at_guides/install.md",
+		"installer_example":os.path.split(__file__)[0]+"/at_guides/installer_example.md",
+		"uninstall":os.path.split(__file__)[0]+"/at_guides/uninstall.md"
+	}
+	
+	if requestedGuides == []:
+		createBoxTitle("Available guides")
+		for index, g in enumerate(guides):
+			print(f"{index}....: {g}")
+	
+	for g in requestedGuides:
+		if not g in guides:
+			createErrorMessage(f"Couldn't find a guide for this -> '{g}'")
+			
+		else:
+			print(open(guides[g], "r").read())
+			input("Press <Enter> to continue...")
+			waitForKey("\r")
+
 
 
 
