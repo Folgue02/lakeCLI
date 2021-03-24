@@ -15,6 +15,8 @@ from time import ctime
 import ctypes
 import shutil
 
+# Prompt toolkit
+
 # Colors in the terminal
 from termcolor import colored
 from colorama import init
@@ -31,8 +33,8 @@ __author__ = "Folgue02"
 # Init variables
 INIT_VARIABLES = {
 	"no-ctrlc":False, # If set to true, disables the ability of closing the CLI by pressing Ctrl + C
-	"starting-directory":"." #Sets the directory where the shell its going to start.
-	
+	"starting-directory":".", #Sets the directory where the shell its going to start.
+	"debug":False
 }
 
 
@@ -85,7 +87,7 @@ def executeLine(line):
 				try:
 					COMMANDS[command](args)
 				except Exception as e:
-					createErrorMessage(f"Exception triggered in built-in command.\nException: '{e}'")
+					createErrorMessage(f"Exception triggered in built-in command.\nException: '{traceback.format_exc() if 'debug' in INIT_VARIABLES else e}'")
 
 			# Addon commands
 			else:
@@ -167,11 +169,21 @@ def listdir(args):
 		# Dirs
 		if files != [] and not noFile:
 			for f in files:
-				table.add_row([f, f"{os.path.getsize(os.path.join(directory, f)) / 1000000} KB", ctime(os.path.getctime(os.path.join(directory, f))), getFileAttribs(os.path.join(directory, f))])
+				try:
+					attribs = getFileAttribs(os.path.join(directory, f))
+				except:
+					attribs = "UNKNOWN"
+				
+				table.add_row([f, f"{os.path.getsize(os.path.join(directory, f)) / 1000000} KB", ctime(os.path.getctime(os.path.join(directory, f))), attribs])
 			
 		if dirs != [] and not noDir:
 			for d in dirs:
-				table.add_row([d, "<FOLDER>", ctime(os.path.getctime(os.path.join(directory, d))), getFileAttribs(os.path.join(directory, d))])
+				try:
+					attribs = getFileAttribs(os.path.join(directory, d))
+				except:
+					attribs = "UNKNOWN"
+				
+				table.add_row([d, "<FOLDER>", ctime(os.path.getctime(os.path.join(directory, d))), attribs])
 		
 		print(table)
 																
@@ -259,7 +271,7 @@ def readFile(args):
 	for file in pars:        
 		# The file doesn't exist
 		if not os.path.isfile(file):
-			createErrorMessage("This file doesn't exist: '{file}'")
+			createErrorMessage(f"This file doesn't exist: '{file}'")
 
 		else:
 			print(f"{20*'-'} START OF FILE '{file}'")
@@ -269,7 +281,11 @@ def readFile(args):
 			# Print the content
 			if pauseMode:
 				h = os.get_terminal_size()[1] 
-				content = open(file, "r").read().split("\n")
+				try:
+					content = open(file, "r").read().split("\n")
+				except PermissionError:
+					createErrorMessage(f"Cannot read content of file '{file}', you don't have read permissions.")
+				
 				# In case that the file is smaller than the screen
 
 				if len(content)// h == 0:
@@ -294,8 +310,10 @@ def readFile(args):
 
 
 			else:
-				print(open(file, "r").read()) if open(file, "r").read() != "" else print(colored("This file is empty.", "red"))
-
+				try:
+					print(open(file, "r").read()) if open(file, "r").read() != "" else print(colored("This file is empty.", "red"))
+				except PermissionError:
+					createErrorMessage(f"Cannot read content of file '{file}', you don't have read permissions.")
 			print(f"\n{20*'-'} END OF FILE '{file}'")
 
 
@@ -616,7 +634,37 @@ def copyDirectory(args):
 		else:
 			shutil.copytree(pars[0], pars[1])
 				
+def settings(args):
+	pars, opts = parseArgs(args)
 	
+	if "help" in opts or opts == []:
+		createHelpText({
+			"description":"A command for modifying or showing the settings of the cli.",
+			"usage":{
+				"settings --show <setting":"Prints the value of the setting <setting>. If <setting> its not specified, it will print the values for all the settings."
+			}
+		})
+		
+	else:
+		if "show" in opts:
+			t = pt()
+			t.field_names = ["Variable name", "Variable value", "Variable value type"]
+			
+			# Show all settings
+			if pars == []:
+				for s in INIT_VARIABLES:
+					t.add_row([s, INIT_VARIABLES[s], type(s)])
+					
+			else:
+				for s in pars:
+					if not s in INIT_VARIABLES:
+						t.add_row([s, colored("Doesn't exist.", "red"), colored("Doesn't exist.", "red")])
+					
+					else:
+						t.add_row([s, INIT_VARIABLES[s], type(INIT_VARIABLES[s])])
+						
+			print(t)
+					
 	
 
 def runScript(args):
@@ -657,8 +705,10 @@ COMMANDS["at"] = addonTools
 COMMANDS["run"] = runScript
 COMMANDS["copyf"]= copyFile
 COMMANDS["copyd"]= copyDirectory
+COMMANDS["settings"] = settings
 COMMANDS["echo"] = lambda x: [print(t) for t in x]
 COMMANDS["exit"] = lambda x: [exit(0)]
+
 
 def main():
 	print(f"""
@@ -680,7 +730,12 @@ def main():
 				createErrorMessage(f"You must specify a value for the variable specified. ('{argument}')")
 				
 			else:
-				INIT_VARIABLES[argument] = opts[argument]
+				predefinedValues = {"False": False, "True":True, "cwd":os.getcwd()}
+				if opts[argument] in predefinedValues:
+					opts[argument] = predefinedValues[opts[argument]]
+					print("test")
+				else:
+					INIT_VARIABLES[argument] = opts[argument]
 		
 		# Rest of settings
 		else:
