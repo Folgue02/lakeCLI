@@ -14,9 +14,7 @@ import traceback
 from time import ctime
 import ctypes
 import shutil
-
-# Prompt toolkit
-
+import readline
 # Colors in the terminal
 from termcolor import colored
 from colorama import init
@@ -27,7 +25,7 @@ from prettytable import PrettyTable as pt
 
 
 # Header
-__version__ = 0.5
+__version__ = 0.8
 __author__ = "Folgue02"
 
 # Init variables
@@ -574,29 +572,46 @@ def addonTools(args):
 	else:
 		createErrorMessage(f"Unknown tool: '{opts['tool']}'")
 
-		
 	del addontool
 
-
+def moveElement(args):
+	pars, opts = parseArgs(args)
+	
+	if "help" in opts or len(pars) != 2:
+		createHelpText({
+			"description":"Moves a file or a directory to an specified location.",
+			"usage":{
+				"move <target> <destiny>":"Moves <target> to <destiny>"
+			}
+		})
+	
+	else:
+		try:
+			createLogMessage(f"Moving '{pars[0]}' to destiny '{pars[1]}'...")
+			shutil.move(pars[0], pars[1])
+			
+		except Exception as e:
+			createErrorMessage(f"Cannot do operation due to the following error: '{e}'")
+	
 def copyFile(args):
 	pars, opts = parseArgs(args)
 	
 	if "help" in opts or pars == []:
-		createHelpMessage({
+		createHelpText({
 			"description":"Copies files into a destiny.",
 			"usage":{
 				"copyf <file1> <destiny>":"Copies <file1> to <destiny>",
-				"copyf <file1> <destiny>":"Copies <file1> to <destiny> even if <destiny> already exists."
+				"copyf <file1> <destiny> --overwrite":"Copies <file1> to <destiny> even if <destiny> already exists."
 			}
 		})
-		
+
 	elif len(pars) != 2:
 		createErrorMessage("You must specify only two arguments, the file to copy, and its destiny.")
 		
 	else:
 		# File doesn't exist
 		if not os.path.isfile(pars[0]):
-			createErrorMessage(f"Cannot copy file '{oars[0]}', file not found.")
+			createErrorMessage(f"Cannot copy file '{pars[0]}', file not found.")
 				
 		else:
 			# Read content of file and then write it into the destiny.
@@ -637,7 +652,7 @@ def copyDirectory(args):
 def settings(args):
 	pars, opts = parseArgs(args)
 	
-	if "help" in opts or opts == []:
+	if "help" in opts or opts == {}:
 		createHelpText({
 			"description":"A command for modifying or showing the settings of the cli.",
 			"usage":{
@@ -653,7 +668,7 @@ def settings(args):
 			# Show all settings
 			if pars == []:
 				for s in INIT_VARIABLES:
-					t.add_row([s, INIT_VARIABLES[s], type(s)])
+					t.add_row([s, INIT_VARIABLES[s], type(INIT_VARIABLES[s])])
 					
 			else:
 				for s in pars:
@@ -662,7 +677,6 @@ def settings(args):
 					
 					else:
 						t.add_row([s, INIT_VARIABLES[s], type(INIT_VARIABLES[s])])
-						
 			print(t)
 					
 	
@@ -708,7 +722,7 @@ COMMANDS["copyd"]= copyDirectory
 COMMANDS["settings"] = settings
 COMMANDS["echo"] = lambda x: [print(t) for t in x]
 COMMANDS["exit"] = lambda x: [exit(0)]
-
+COMMANDS["move"] = moveElement
 
 def main():
 	print(f"""
@@ -733,9 +747,8 @@ def main():
 				predefinedValues = {"False": False, "True":True, "cwd":os.getcwd()}
 				if opts[argument] in predefinedValues:
 					opts[argument] = predefinedValues[opts[argument]]
-					print("test")
-				else:
-					INIT_VARIABLES[argument] = opts[argument]
+				
+				INIT_VARIABLES[argument] = opts[argument]
 		
 		# Rest of settings
 		else:
@@ -748,7 +761,14 @@ def main():
 	# Directory where the CLI will be started
 	os.chdir(INIT_VARIABLES["starting-directory"])
 	
-	
+	def completer(text, state):
+		for d in os.listdir():
+			if d.startswith(text):
+				if not state:
+					return d
+				
+				else:
+					state -= 1
 	
 	# Main loop	
 	while True:
@@ -762,6 +782,9 @@ def main():
 			else:
 				pass
 
+				
+			readline.parse_and_bind("tab: complete")
+			readline.set_completer(completer)	
 			userinput = input(colored(userPrompt, on_color="on_green") + pathPrompt + "# ")
 		except KeyboardInterrupt:
 			if INIT_VARIABLES["no-ctrlc"]:
