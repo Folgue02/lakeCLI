@@ -18,7 +18,8 @@ def guide(requestedGuides):
 	guides = {
 		"install":os.path.split(__file__)[0]+"/at_guides/install.md",
 		"installer_example":os.path.split(__file__)[0]+"/at_guides/installer_example.md",
-		"uninstall":os.path.split(__file__)[0]+"/at_guides/uninstall.md"
+		"uninstall":os.path.split(__file__)[0]+"/at_guides/uninstall.md",
+		"troubleshoot_launch":os.path.split(__file__)[0]+"/at_guides/launch_problems.md"
 	}
 	
 	if requestedGuides == []:
@@ -32,7 +33,7 @@ def guide(requestedGuides):
 			
 		else:
 			print(open(guides[g], "r").read())
-			input("Press <Enter> to continue...")
+			print("Press <Enter> to continue...", end="")
 			waitForKey("\r")
 
 

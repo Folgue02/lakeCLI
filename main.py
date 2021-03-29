@@ -25,14 +25,18 @@ from prettytable import PrettyTable as pt
 
 
 # Header
-__version__ = 0.8
+__version__ = 1.0
 __author__ = "Folgue02"
 
 # Init variables
 INIT_VARIABLES = {
 	"no-ctrlc":False, # If set to true, disables the ability of closing the CLI by pressing Ctrl + C
-	"starting-directory":".", #Sets the directory where the shell its going to start.
-	"debug":False
+	"start-directory":".", #Sets the directory where the shell its going to start.
+	"debug":False, # Modifies the behaviour of some parts of the code allowing better debugging.
+	"separate-commands":False, # Draws a line between the end of a command and the prompt
+	"disable-completer":False, # Disables the auto completer function
+	"addon-directory":f"C:\\Users\\{getuser()}\\.lakeCLIAddons", # Directory that contains the addons
+	"addon-file":f"C:\\Users\\{getuser()}\\.lakeCLIAddons\\.addon_config.json" # Location where the addon configuration file is.
 }
 
 
@@ -40,8 +44,6 @@ INIT_VARIABLES = {
 VARIABLES = {}
 COMMANDS = {} # These are the built-in commands
 ADDON_COMMANDS = {"addons":{}}
-ADDON_DIRECTORY = f"C:\\Users\\{getuser()}\\.lakeCLIAddons"
-ADDON_FILE = f"C:\\Users\\{getuser()}\\.lakeCLIAddons\\.addon_config.json"
 
 
 
@@ -91,7 +93,7 @@ def executeLine(line):
 			else:
 				try:
 					# Executes the command in the folder of the addon.
-					os.system(os.path.join(ADDON_DIRECTORY, command, ADDON_COMMANDS["addons"][command]["entryFile"]) + " " + " ".join(args))
+					os.system(os.path.join(INIT_VARIABLES['addon-directory'], command, ADDON_COMMANDS["addons"][command]["entryFile"]) + " " + " ".join(args))
 
 				except Exception as e:
 					createErrorMessage(f"Exception triggered in addon's command.\nException: '{e}'")
@@ -116,8 +118,9 @@ def listdir(args):
 	complexMode = False
 	noDir = False
 	noFile = False
+	simpleMode = False
 	targetFolders = [os.getcwd()]
-
+	
 	pars, opts = parseArgs(args)
 
 
@@ -131,7 +134,8 @@ def listdir(args):
 			"description":"Shows the content of a directory (if nothing its specified it will show the content of the current working directory.)",
 			"usage":{
 				"ls <dir>":"Lists the content of <dir>",
-				"ls --no-file / --no-dir":"Lists the content of the diretory except for what has been specified"
+				"ls --no-file / --no-dir":"Lists the content of the diretory except for what has been specified (only works in normal mode).",
+				"ls --simple-mode":"Only prints all the files and folders names. (avoids name shortening, which happens in normal mode)"
 			}
 		})
 		return
@@ -141,6 +145,9 @@ def listdir(args):
 
 	if "no-file" in opts:
 		noFile = True
+		
+	if "simple-mode" in opts:
+		simpleMode = True
 
 	# Execution time
 	for directory in targetFolders:
@@ -165,26 +172,40 @@ def listdir(args):
 				files.append(element)
 
 		# Dirs
-		if files != [] and not noFile:
+		if files != [] and not noFile and not simpleMode:
 			for f in files:
 				try:
 					attribs = getFileAttribs(os.path.join(directory, f))
 				except:
 					attribs = "UNKNOWN"
 				
-				table.add_row([f, f"{os.path.getsize(os.path.join(directory, f)) / 1000000} KB", ctime(os.path.getctime(os.path.join(directory, f))), attribs])
+				name = f
+				if len(name) > 30:
+					name = name[:27] + "..."
+				table.add_row([name, f"{format(os.path.getsize(os.path.join(directory, f)) / 1000, 'f')} KB", ctime(os.path.getctime(os.path.join(directory, f))), attribs])
 			
-		if dirs != [] and not noDir:
+		if dirs != [] and not noDir and not simpleMode:
 			for d in dirs:
 				try:
 					attribs = getFileAttribs(os.path.join(directory, d))
 				except:
 					attribs = "UNKNOWN"
 				
-				table.add_row([d, "<FOLDER>", ctime(os.path.getctime(os.path.join(directory, d))), attribs])
-		
-		print(table)
-																
+				
+				name = d
+				if len(name) > 30:
+					name = name[:27] + "..."	
+					
+				
+				table.add_row([name, "<FOLDER>", ctime(os.path.getctime(os.path.join(directory, d))), attribs])
+		if not simpleMode:
+			print(table)
+			
+		else:
+			createBoxTitle(f"Showing files and folders of directory '{directory}'")
+			for index, element in enumerate(os.listdir(directory)):
+				print(f"{index+1}\t:\t{colored(element, on_color='on_green') if os.path.isdir(os.path.join(directory, element)) else element}")
+					
 def executeConsoleCommand(args):
 	pars, opts = parseArgs(args)
 	debuggingMode = False
@@ -451,28 +472,41 @@ def removeFile(args):
 def refreshAddons(args):
 	# This function reads the addon configuration file
 	global ADDON_COMMANDS
-	if not os.path.isfile(ADDON_FILE):
-		createErrorMessage(f"The addon configuration file doesn't exist. '{ADDON_FILE}'")
+	pars, opts = parseArgs(args)
+	
+	
+	if "help" in opts:
+		createHelpText({
+			"description":"Updates the addon configuration by reading the addon configuration file.",
+			"usage":{
+				"refresh":"Refreshes the addon configuration."
+			}
+		})
+		return
+	
+	
+	if not os.path.isfile(INIT_VARIABLES['addon-file']):
+		createErrorMessage(f"The addon configuration file doesn't exist. '{INIT_VARIABLES['addon-file']}'")
 		print(f"Creating an empty version of it...")
 		
 		# The directory doesn't exist either
-		if not os.path.isdir(ADDON_DIRECTORY):
-			os.mkdir(ADDON_DIRECTORY)
+		if not os.path.isdir(INIT_VARIABLES['addon-directory']):
+			os.mkdir(INIT_VARIABLES['addon-directory'])
 			print("The addons directory wasn't found, so it will be created as well.")
 
-		open(ADDON_FILE, "w").write("{\"addons\":{}}") # Empty file
+		open(INIT_VARIABLES['addon-file'], "w").write("{\"addons\":{}}") # Empty file
 
 	else:
 		try:
-			print(f"Reading addon configuration file in location {ADDON_FILE}...")
-			ADDON_COMMANDS = loads(open(ADDON_FILE, "r").read())
+			print(f"Reading addon configuration file in location {INIT_VARIABLES['addon-file']}...")
+			ADDON_COMMANDS = loads(open(INIT_VARIABLES['addon-file'], "r").read())
 			print(f"Addon configuration updated.")
 
 		except JSONDecodeError:
 			createErrorMessage("The configuration file its corrupted.")
 
 			if askYesNo("Do you want to clear the addon configuration file?"):
-				open(ADDON_FILE, "w").write("{}")
+				open(INIT_VARIABLES['addon-file'], "w").write("{}")
 
 
 def printWorkingDirectory(args):
@@ -543,10 +577,10 @@ def addonTools(args):
 		else:
 			for f in pars:
 				createBoxTitle(f"Starting installation for install file '{f}'")
-				addontool.install(ADDON_FILE, f)
+				addontool.install(INIT_VARIABLES['addon-file'], f)
 	# list
 	elif "list" == opts["tool"]:
-		addontool.list(ADDON_FILE)
+		addontool.list(INIT_VARIABLES['addon-file'])
 
 	# remove
 	elif "uninstall" == opts["tool"] or "remove" == opts["tool"]:
@@ -555,14 +589,14 @@ def addonTools(args):
 
 		else:
 			for p in pars:
-				addontool.uninstall(ADDON_FILE, p)
+				addontool.uninstall(INIT_VARIABLES['addon-file'], p)
 
 	elif "help" == opts["tool"]:
 		if pars == []:
 			createErrorMessage("You must specify the addon.")
 		
 		else:
-			addontool.getHelp(ADDON_FILE, pars[0])
+			addontool.getHelp(INIT_VARIABLES['addon-file'], pars[0])
 				
 
 	elif "guide" == opts["tool"]:
@@ -656,7 +690,8 @@ def settings(args):
 		createHelpText({
 			"description":"A command for modifying or showing the settings of the cli.",
 			"usage":{
-				"settings --show <setting":"Prints the value of the setting <setting>. If <setting> its not specified, it will print the values for all the settings."
+				"settings --show <setting>":"Prints the value of the setting <setting>. If <setting> its not specified, it will print the values for all the settings.",
+				"settings --change:<setting> <value>":"Modifies the value of <setting>, setting the new value, <value>."
 			}
 		})
 		
@@ -679,7 +714,22 @@ def settings(args):
 						t.add_row([s, INIT_VARIABLES[s], type(INIT_VARIABLES[s])])
 			print(t)
 					
-	
+		if "change" in opts:
+			targetSetting = opts["change"]
+			
+			# No new value for the setting
+			if pars == []:
+				createErrorMessage(f"You must specify the new value for the setting you want to modify.")
+				
+			if opts["change"] == None:
+				createErrorMessage(f"You must specfiy the setting you want to modify.")
+				
+			else:
+				if not opts["change"] in INIT_VARIABLES:
+					createErrorMessage(f"This setting couldn't be found, '{opts['change']}'")
+				
+				else:
+					INIT_VARIABLES[opts["change"]] = parseData(pars[0])
 
 def runScript(args):
 	pars, opts = parseArgs(args)
@@ -701,6 +751,33 @@ def runScript(args):
 			for line in open(pars[0], "r").read().split("\n"):
 				executeLine(line)
 
+def startElevatedProccess(args):
+	pars, opts = parseArgs(args)
+	
+	if "help" in opts or pars == []:
+		createHelpText({
+			"description":"Executes a process with elevated privileges (win32).",
+			"usage":{
+				"sep \"<proccestoexecute> <argument1> <argument2>\"": "Starts process <proccesstoexecute> with elevated privileges and <argument1> and <argument2> as arguments."
+			}
+		})
+		
+	else:
+		pars = parseSyntax(pars[0])
+		proc = pars[0]
+		parameters = pars[1:]
+		try:
+			if len(pars) == 1:
+				os.system(f"powershell Start-Process {pars[0]} -verb runas")
+
+
+			else:
+				proc = pars[0]
+				parameters = pars[1:]
+				os.system(f"powershell Start-Process \"{proc}\" -ArgumentList \"{', '.join(parameters)}\"")
+		except Exception as e:
+			createErrorMessage(f"Something went wrong: {e}")
+			
 
 # update the COMMANDS variable
 #       alias -- function
@@ -720,6 +797,7 @@ COMMANDS["run"] = runScript
 COMMANDS["copyf"]= copyFile
 COMMANDS["copyd"]= copyDirectory
 COMMANDS["settings"] = settings
+COMMANDS["sep"] = startElevatedProccess
 COMMANDS["echo"] = lambda x: [print(t) for t in x]
 COMMANDS["exit"] = lambda x: [exit(0)]
 COMMANDS["move"] = moveElement
@@ -759,33 +837,42 @@ def main():
 	# Initializiation
 	
 	# Directory where the CLI will be started
-	os.chdir(INIT_VARIABLES["starting-directory"])
-	
-	def completer(text, state):
-		for d in os.listdir():
-			if d.startswith(text):
-				if not state:
-					return d
+	os.chdir(INIT_VARIABLES["start-directory"])
+	if not INIT_VARIABLES["disable-completer"]:
+		def completer(text, state):
+			for d in os.listdir():
+				if d.startswith(text):
+					if not state:
+						return d
 				
-				else:
-					state -= 1
+					else:
+						state -= 1
 	
-	# Main loop	
+	else:
+		def completer(text, state):
+			pass
+						
+						
+	readline.parse_and_bind("tab: complete")
+	readline.set_completer(completer)	
+
+	# Main loop
 	while True:
 		try:
+			# Create prompt
 			userPrompt = f"[ {getuser().upper()} ]"
 			pathPrompt = os.getcwd().replace("\\", "/").upper()[2:]
-
+			
+			# Detect privileges
 			if ctypes.windll.shell32.IsUserAnAdmin():
 				userPrompt = f"[ ADMIN ]"
 
 			else:
 				pass
 
-				
-			readline.parse_and_bind("tab: complete")
-			readline.set_completer(completer)	
+			# Get the user input
 			userinput = input(colored(userPrompt, on_color="on_green") + pathPrompt + "# ")
+
 		except KeyboardInterrupt:
 			if INIT_VARIABLES["no-ctrlc"]:
 				print("^C")
@@ -793,8 +880,13 @@ def main():
 			
 			else:
 				exit("\nShell closed manually.")
-
+		
 		executeLine(userinput)
+		# Separate lines setting activated
+		if INIT_VARIABLES["separate-commands"] and userinput != "":
+			print(len(userPrompt + pathPrompt)*"=")
+			
+
 
 
 

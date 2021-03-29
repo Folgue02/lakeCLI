@@ -8,7 +8,7 @@
 	"help":{
 		"description":"The description of my addon.",
 		"usage":{
-			"myCommandName --aParameter:itsValue":"myCommandName will use <itsValue> to o something."
+			"myCommandName --aParameter:itsValue":"myCommandName will use <itsValue> to do something."
 		},
 	"entryFile":"theFileToExecute.py",
 	"files":{

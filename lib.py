@@ -29,6 +29,26 @@ def createHelpText(template):
 
 def createBoxTitle(msg):
 	print(f"========== {msg} ==========")
+
+def parseData(data):
+	defaultVals = {"True":True, "False":False, "None":None, "$cwd$":os.getcwd()}
+	
+	if data in defaultVals:
+		data = defaultVals[data]
+	
+	else:
+		# integer
+		try:
+			data = int(data)
+		except ValueError:
+			pass
+			
+	return data
+	
+
+
+	
+	
 def waitForKey(key):
 	while True:
 		char = getch().decode("utf-8")
@@ -125,13 +145,56 @@ def getFileAttribs(targetFile):
 			result += "-"
 													
 	return result
-											
+
 	
+class table:
+	def __init__(self, rowTitles:list):
+		self.rowTitles = rowTitles
+		self.content = []
+		
+		
+	def printTable(self):
+		# Print the titles of the rows
+		
+		# Turn all rows into string lists
+		for row in range(len(self.content)):
+			for col in range(len(self.content[row])):
+				self.content[row][col] = str(self.content[row][col])
+		print(self.content)
+		
+		# Contains the width of each column
+		widths = []
+		for col_title in range(len(self.rowTitles)):
+			colWidth = len(self.rowTitles[col_title])
+			for col in self.content[col_title]:
+				if len(col) > colWidth:
+					colWidth = len(col)
+			widths.append(colWidth)
+			
+		print(widths)
+		print(self.content)
+		
+		# THINGS TO FIX HERE
+		
+	def addContent(self, newContent:list):
+		# Adds a row of content
+		# The length of the list must be as long as the rowTitles length
+		
+		if len(newContent) != len(self.rowTitles):
+			raise ValueError(f"The new row must contain '{len(self.rowTitles)}', instead, the new content had a length of '{len(self.rowTitles)}'")
+			
+		else:
+			self.content.append(newContent)
 	
 
+		
+
+
 if __name__ == "__main__":
-	createBoxTitle("PURE SHIT")
-	createBoxTitle("text")
-	createBoxTitle("")
-	waitForKey("e")
-	print("done")
+	createBoxTitle(f"This script its designed to be a library and be imported by 'main.py'.")
+	
+	test = table(["Name", "Age", "Class"])
+	test.addContent(["Folgue", 18, "4th B"])
+	test.addContent(["Carls", 19, "5th B"])
+	test.printTable()
+	
