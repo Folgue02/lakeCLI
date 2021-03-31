@@ -20,12 +20,10 @@ from termcolor import colored
 from colorama import init
 init()
 
-# Tables
-from prettytable import PrettyTable as pt
 
 
 # Header
-__version__ = 1.0
+__version__ = 1.2
 __author__ = "Folgue02"
 
 # Init variables
@@ -88,6 +86,7 @@ def executeLine(line):
 				try:
 					COMMANDS[command](args)
 				except Exception as e:
+					errorToDisplay = e if not INIT_VARIABLES["debug"] else traceback.format_exc()
 					createErrorMessage(f"Exception triggered in built-in command.\nException: '{traceback.format_exc() if 'debug' in INIT_VARIABLES else e}'")
 
 			# The command its a an alias
@@ -785,7 +784,7 @@ def settings(args):
 			if pars == []:
 				createErrorMessage(f"You must specify the new value for the setting you want to modify.")
 				
-			if opts["change"] == None:
+			elif opts["change"] == None:
 				createErrorMessage(f"You must specfiy the setting you want to modify.")
 				
 			else:
@@ -899,7 +898,7 @@ def main():
 			# So far this is empty
 			pass
 	
-			
+	
 	# Initializiation
 	
 	# Directory where the CLI will be started
