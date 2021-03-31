@@ -1,4 +1,5 @@
-from json import loads, dumps, JSONDecodeError; import os;
+from json import loads, dumps, JSONDecodeError
+import os
 from lib import *
 import os
 import shutil
@@ -229,9 +230,9 @@ def list(addonFile):
 	else:
 		createBoxTitle("Showing all addons installed...")
 
-		p = pt()
-		p.field_names = ["Reference command", "Version", "Entry file"]
+		t = table(["Reference command", "Version", "Entry file"])
+		
 		for a in currentConfig["addons"]:
-			p.add_row([a, currentConfig["addons"][a]["version"], currentConfig["addons"][a]["entryFile"]])
+			t.addContent([a, currentConfig["addons"][a]["version"], currentConfig["addons"][a]["entryFile"]])
 
-		print(p)
+		t.printTable()

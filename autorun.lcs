@@ -1,0 +1,9 @@
+# This script gets executed everytime the command line its started
+# You can avoid this from happening by adding the parameter "--run-autorun:false".
+
+# Load the configuration.
+refresh 
+
+
+echo "Autorun script's execution finished."
+

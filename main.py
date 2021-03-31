@@ -35,6 +35,7 @@ INIT_VARIABLES = {
 	"debug":False, # Modifies the behaviour of some parts of the code allowing better debugging.
 	"separate-commands":False, # Draws a line between the end of a command and the prompt
 	"disable-completer":False, # Disables the auto completer function
+	"run-autorun":True, # Run the autorun script 
 	"addon-directory":f"C:\\Users\\{getuser()}\\.lakeCLIAddons", # Directory that contains the addons
 	"addon-file":f"C:\\Users\\{getuser()}\\.lakeCLIAddons\\.addon_config.json" # Location where the addon configuration file is.
 }
@@ -43,7 +44,7 @@ INIT_VARIABLES = {
 # Variables
 VARIABLES = {}
 COMMANDS = {} # These are the built-in commands
-ADDON_COMMANDS = {"addons":{}}
+ADDON_COMMANDS = {"addons":{},"aliases":{}}
 
 
 
@@ -78,7 +79,7 @@ def executeLine(line):
 		args = [] if len(userinput) == 0 else userinput[1:]
 
 		# The command doesn't exist
-		if command not in COMMANDS and command not in ADDON_COMMANDS["addons"]:
+		if command not in COMMANDS and command not in ADDON_COMMANDS["addons"] and not command in ADDON_COMMANDS["aliases"]:
 			print(f"'{command}' its not related to any command.")
 
 		else:
@@ -89,6 +90,11 @@ def executeLine(line):
 				except Exception as e:
 					createErrorMessage(f"Exception triggered in built-in command.\nException: '{traceback.format_exc() if 'debug' in INIT_VARIABLES else e}'")
 
+			# The command its a an alias
+			elif command in ADDON_COMMANDS["aliases"]:
+				line = ADDON_COMMANDS["aliases"][command] + " ".join(args)
+				executeLine(line) # FIX RECURSION ERROR WHEN AN ALIAS CONTAINS ANOTHER ALIAS AS VALUE
+			
 			# Addon commands
 			else:
 				try:
@@ -155,13 +161,12 @@ def listdir(args):
 			createErrorMessage(f"The path specified doesn't exist: '{directory}'")
 			continue
 	
-		print(f"Showing content of '{directory}'")
 		dirElements = os.listdir(directory)
 		files = []
 		dirs = []
 		# Table to display
-		table = pt()
-		table.field_names = ["Name", "Size", "Creation date", "Attributes"]
+		t = table(["Name", "Size", "Creation date", "Attributes"])
+		
 
 		# Separates the folders from the files
 		for element in dirElements:
@@ -182,7 +187,7 @@ def listdir(args):
 				name = f
 				if len(name) > 30:
 					name = name[:27] + "..."
-				table.add_row([name, f"{format(os.path.getsize(os.path.join(directory, f)) / 1000, 'f')} KB", ctime(os.path.getctime(os.path.join(directory, f))), attribs])
+				t.addContent([name, f"{format(os.path.getsize(os.path.join(directory, f)) / 1000, 'f')} KB", ctime(os.path.getctime(os.path.join(directory, f))), attribs])
 			
 		if dirs != [] and not noDir and not simpleMode:
 			for d in dirs:
@@ -197,9 +202,9 @@ def listdir(args):
 					name = name[:27] + "..."	
 					
 				
-				table.add_row([name, "<FOLDER>", ctime(os.path.getctime(os.path.join(directory, d))), attribs])
+				t.addContent([name, "<FOLDER>", ctime(os.path.getctime(os.path.join(directory, d))), attribs])
 		if not simpleMode:
-			print(table)
+			t.printTable()
 			
 		else:
 			createBoxTitle(f"Showing files and folders of directory '{directory}'")
@@ -287,7 +292,7 @@ def readFile(args):
 		pauseMode = True
 
 
-	for file in pars:        
+	for file in pars:
 		# The file doesn't exist
 		if not os.path.isfile(file):
 			createErrorMessage(f"This file doesn't exist: '{file}'")
@@ -305,6 +310,9 @@ def readFile(args):
 				except PermissionError:
 					createErrorMessage(f"Cannot read content of file '{file}', you don't have read permissions.")
 				
+				except UnicodeDecodeError:
+					createErrorMessage(f"Cannot decode the specified file ('{file}').")
+					
 				# In case that the file is smaller than the screen
 
 				if len(content)// h == 0:
@@ -333,6 +341,9 @@ def readFile(args):
 					print(open(file, "r").read()) if open(file, "r").read() != "" else print(colored("This file is empty.", "red"))
 				except PermissionError:
 					createErrorMessage(f"Cannot read content of file '{file}', you don't have read permissions.")
+					
+				except UnicodeDecodeError:
+					createErrorMessage(f"Cannot decode the specified file ('{file}').")
 			print(f"\n{20*'-'} END OF FILE '{file}'")
 
 
@@ -477,12 +488,12 @@ def refreshAddons(args):
 	
 	if "help" in opts:
 		createHelpText({
-			"description":"Updates the addon configuration by reading the addon configuration file.",
+			"description":"Reads / changes the configuration file.",
 			"usage":{
 				"refresh":"Refreshes the addon configuration."
 			}
 		})
-		return
+	
 	
 	
 	if not os.path.isfile(INIT_VARIABLES['addon-file']):
@@ -494,21 +505,75 @@ def refreshAddons(args):
 			os.mkdir(INIT_VARIABLES['addon-directory'])
 			print("The addons directory wasn't found, so it will be created as well.")
 
-		open(INIT_VARIABLES['addon-file'], "w").write("{\"addons\":{}}") # Empty file
+		open(INIT_VARIABLES['addon-file'], "w").write("{\"addons\":{}, \"aliases\":{}}") # Empty file
 
 	else:
-		try:
-			print(f"Reading addon configuration file in location {INIT_VARIABLES['addon-file']}...")
-			ADDON_COMMANDS = loads(open(INIT_VARIABLES['addon-file'], "r").read())
-			print(f"Addon configuration updated.")
+	
+		if "save" in opts:
+			open(INIT_VARIABLES["addon-file"], "w").write(dumps(ADDON_COMMANDS))
+			createLogMessage("Configuration saved in the configuration file.")
+		
+		else:
+		
+			try:
+				print(f"Reading addon configuration file in location {INIT_VARIABLES['addon-file']}...")
+				ADDON_COMMANDS = loads(open(INIT_VARIABLES['addon-file'], "r").read())
+				print(f"Addon configuration updated.")
 
-		except JSONDecodeError:
-			createErrorMessage("The configuration file its corrupted.")
+			except JSONDecodeError:
+				createErrorMessage("The configuration file its corrupted.")
 
-			if askYesNo("Do you want to clear the addon configuration file?"):
-				open(INIT_VARIABLES['addon-file'], "w").write("{}")
+				if askYesNo("Do you want to clear the addon configuration file?"):
+					open(INIT_VARIABLES['addon-file'], "w").write('{"addons":{},"aliases":{}}')
 
-
+				
+def alias(args):
+	pars, opts = parseArgs(args)
+	
+	if "help" in opts:
+		createHelpText({
+			"description":"Modify the console aliases",
+			"usage":{
+				"alias --show":"Shows all the current aliases.",
+				"alias --add:<alias> \"<command>\"":"Creates a new alias with name <alias> for a command (<command>).",
+				"alias --remove <alias>":"Removes the alias '<alias>'."
+			},
+			"notes":"The alias command only changes the configuration of the current session. If you want to save the aliases added or removed, you must use \"refresh --save\""
+		})
+	
+	else:
+		if "show" in opts:
+			# Shows the current aliases loaded.
+			t = table(["Alias name", "Value"])
+					
+			for x in ADDON_COMMANDS["aliases"]:
+				t.addContent([x, ADDON_COMMANDS["aliases"][x]])
+				
+			t.printTable()
+		
+		else:
+			
+			if "add" in opts:
+				# This option requires parameters
+				if pars == [] or opts["add"] == None:
+					createErrorMessage("You must specify new alias name, and its command (--add:<newalias> <command>)")
+				
+				else:
+					if opts["add"] in ADDON_COMMANDS["aliases"] and not "overwrite" in opts:
+						createErrorMessage(f"The alias '{opts['add']}' already exists. If you want to overwrite it add the parameter \"--overwrite\"")
+					ADDON_COMMANDS["aliases"][opts["add"]] = pars[0]
+				
+			if "remove" in opts:
+				if pars == []:
+					createErrorMessage("You must specify the alias to remove.")
+				
+				else:
+					if not pars[0] in ADDON_COMMANDS["aliases"]:
+						createErrorMessage(f"The alias '{pars[0]}' doesn't exist.")
+					
+					else:
+						del ADDON_COMMANDS["aliases"][pars[0]]
+				
 def printWorkingDirectory(args):
 	pars, opts = parseArgs(args)
 
@@ -697,22 +762,21 @@ def settings(args):
 		
 	else:
 		if "show" in opts:
-			t = pt()
-			t.field_names = ["Variable name", "Variable value", "Variable value type"]
+			t = table(["Variable name", "Variable value", "Variable value type"])
 			
 			# Show all settings
 			if pars == []:
 				for s in INIT_VARIABLES:
-					t.add_row([s, INIT_VARIABLES[s], type(INIT_VARIABLES[s])])
+					t.addContent([s, INIT_VARIABLES[s], type(INIT_VARIABLES[s])])
 					
 			else:
 				for s in pars:
 					if not s in INIT_VARIABLES:
-						t.add_row([s, colored("Doesn't exist.", "red"), colored("Doesn't exist.", "red")])
+						t.addContent([s, colored("Doesn't exist.", "red"), colored("Doesn't exist.", "red")])
 					
 					else:
-						t.add_row([s, INIT_VARIABLES[s], type(INIT_VARIABLES[s])])
-			print(t)
+						t.addContent([s, INIT_VARIABLES[s], type(INIT_VARIABLES[s])])
+			t.printTable()
 					
 		if "change" in opts:
 			targetSetting = opts["change"]
@@ -768,13 +832,13 @@ def startElevatedProccess(args):
 		parameters = pars[1:]
 		try:
 			if len(pars) == 1:
-				os.system(f"powershell Start-Process {pars[0]} -verb runas")
+				os.system(f"powershell Start-Process {pars[0]} -Verb RunAs")
 
 
 			else:
 				proc = pars[0]
 				parameters = pars[1:]
-				os.system(f"powershell Start-Process \"{proc}\" -ArgumentList \"{', '.join(parameters)}\"")
+				os.system(f"powershell Start-Process \"{proc}\" -ArgumentList \"{', '.join(parameters)}\" -Verb RunAs")
 		except Exception as e:
 			createErrorMessage(f"Something went wrong: {e}")
 			
@@ -798,9 +862,11 @@ COMMANDS["copyf"]= copyFile
 COMMANDS["copyd"]= copyDirectory
 COMMANDS["settings"] = settings
 COMMANDS["sep"] = startElevatedProccess
+COMMANDS["move"] = moveElement
+COMMANDS["alias"] = alias
+
 COMMANDS["echo"] = lambda x: [print(t) for t in x]
 COMMANDS["exit"] = lambda x: [exit(0)]
-COMMANDS["move"] = moveElement
 
 def main():
 	print(f"""
@@ -841,7 +907,7 @@ def main():
 	if not INIT_VARIABLES["disable-completer"]:
 		def completer(text, state):
 			for d in os.listdir():
-				if d.startswith(text):
+				if d.lower().startswith(text.lower()):
 					if not state:
 						return d
 				
@@ -856,6 +922,11 @@ def main():
 	readline.parse_and_bind("tab: complete")
 	readline.set_completer(completer)	
 
+	
+	# Load the configuration file
+	if INIT_VARIABLES["run-autorun"]:
+		runScript([os.path.join(os.path.split(__file__)[0], "autorun.lcs")])
+	
 	# Main loop
 	while True:
 		try:
@@ -884,7 +955,7 @@ def main():
 		executeLine(userinput)
 		# Separate lines setting activated
 		if INIT_VARIABLES["separate-commands"] and userinput != "":
-			print(len(userPrompt + pathPrompt)*"=")
+			print(len(userPrompt + pathPrompt)*colored("=", "green"))
 			
 
 

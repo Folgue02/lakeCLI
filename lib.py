@@ -26,6 +26,9 @@ def createHelpText(template):
 		for example in template["usage"]:
 			print("\t" + example)
 			print("\t\t" + template["usage"][example]+ "\n")
+		
+	if "notes" in template:
+		print(f"Notes: {template['notes']}")
 
 def createBoxTitle(msg):
 	print(f"========== {msg} ==========")
@@ -148,10 +151,10 @@ def getFileAttribs(targetFile):
 
 	
 class table:
-	def __init__(self, rowTitles:list):
+	def __init__(self, rowTitles:list, separator:str=" "):
 		self.rowTitles = rowTitles
 		self.content = []
-		
+		self.separator = separator
 		
 	def printTable(self):
 		# Print the titles of the rows
@@ -160,22 +163,43 @@ class table:
 		for row in range(len(self.content)):
 			for col in range(len(self.content[row])):
 				self.content[row][col] = str(self.content[row][col])
-		print(self.content)
 		
 		# Contains the width of each column
 		widths = []
-		for col_title in range(len(self.rowTitles)):
-			colWidth = len(self.rowTitles[col_title])
-			for col in self.content[col_title]:
-				if len(col) > colWidth:
-					colWidth = len(col)
+		for col in range(len(self.rowTitles)):
+		
+			# Default value for the width of the column
+			colWidth = len(self.rowTitles[col])
+		
+			# Iterate through the entire column
+			for row in range(len(self.content)):
+				if len(self.content[row][col]) > colWidth:
+					colWidth = len(self.content[row][col])
+					
 			widths.append(colWidth)
+		
+		# Print the table
+		
+		# Function to save time repeating code
+		createElement = lambda element, w: element + " "*(w - len(element))
+		
+		# Start with the column titles
+		for index in range(len(self.rowTitles)):
+			print(createElement(self.rowTitles[index], widths[index]), self.separator, end="")
+		print()
+		
+		# Print the underline
+		for index in range(len(self.rowTitles)):
+			print("="*widths[index], self.separator, end="")
+		print()
+		
+		# Print the content
+		for row_index in range(len(self.content)):
+			for col_index in range(len(self.content[row_index])):
+				print(createElement(self.content[row_index][col_index], widths[col_index]), self.separator, end="")
+				
+			print() # Jumpline after each row printed
 			
-		print(widths)
-		print(self.content)
-		
-		# THINGS TO FIX HERE
-		
 	def addContent(self, newContent:list):
 		# Adds a row of content
 		# The length of the list must be as long as the rowTitles length
