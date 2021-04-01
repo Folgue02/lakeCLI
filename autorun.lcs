@@ -4,6 +4,10 @@
 # Load the configuration.
 refresh 
 
+# Disable the option of closing the shell with ^C
+settings --change:no-ctrlc True
+
+
 
 echo "Autorun script's execution finished."
 

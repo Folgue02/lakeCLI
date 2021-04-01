@@ -217,8 +217,3 @@ class table:
 if __name__ == "__main__":
 	createBoxTitle(f"This script its designed to be a library and be imported by 'main.py'.")
 	
-	test = table(["Name", "Age", "Class"])
-	test.addContent(["Folgue", 18, "4th B"])
-	test.addContent(["Carls", 19, "5th B"])
-	test.printTable()
-	
