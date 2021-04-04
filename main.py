@@ -33,7 +33,8 @@ INIT_VARIABLES = {
 	"debug":False, # Modifies the behaviour of some parts of the code allowing better debugging.
 	"separate-commands":False, # Draws a line between the end of a command and the prompt
 	"disable-completer":False, # Disables the auto completer function
-	"run-autorun":True, # Run the autorun script 
+	"run-autorun":True, # Run the autorun script
+	"title":f"LakeCLI v{__version__}", # Title displayed
 	"addon-directory":f"C:\\Users\\{getuser()}\\.lakeCLIAddons", # Directory that contains the addons
 	"addon-file":f"C:\\Users\\{getuser()}\\.lakeCLIAddons\\.addon_config.json" # Location where the addon configuration file is.
 }
@@ -917,7 +918,8 @@ def main():
 		def completer(text, state):
 			pass
 						
-						
+	os.system(f"title {INIT_VARIABLES['title']}")
+			
 	readline.parse_and_bind("tab: complete")
 	readline.set_completer(completer)	
 
