@@ -2,7 +2,7 @@
 # You can avoid this from happening by adding the parameter "--run-autorun:false".
 
 # Load the configuration.
-refresh 
+refresh
 
 # Disable the option of closing the shell with ^C
 settings --change:no-ctrlc True
