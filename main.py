@@ -1,4 +1,6 @@
+#!/usr/bin/env python3
 # Imports of the same project
+
 
 from lib import *
 
@@ -23,7 +25,7 @@ init()
 
 
 # Header
-__version__ = 1.2
+__version__ = 1.5
 __author__ = "Folgue02"
 
 # Init variables
@@ -612,14 +614,15 @@ def printWorkingDirectory(args):
 def addonTools(args):
     pars, opts = parseArgs(args)
 
-    if not "tool" in opts or "help" in opts:
+    if pars == [] or "help" in opts:
         createHelpText({
             "description":"Tool for addons management.",
             "usage":{
-                "addontool --tool:install <installfile>":"Installs the addon specified in the install file.",
-                "addontool --tool:remove <addon>":"Removes the <addon> from the installed addons (includes its installation folder).",
-                "addontool --tool:list":"Lists the installed addons.",
-                "addontool --tool:help <addon>":"Shows the help of the addon specified."
+                "addontool install <installfile>":"Installs the addon specified in the install file.",
+                "addontool remove <addon>":"Removes the <addon> from the installed addons (includes its installation folder).",
+                "addontool list":"Lists the installed addons.",
+                "addontool help <addon>":"Shows the help of the addon specified.",
+                "addontool clean (--step-by-step)":"Cleans the addon folder. (Removes folders that are not related to any addon). --step-by-step asks for removal per folder."
             }
         })
         return
@@ -636,40 +639,47 @@ def addonTools(args):
 
     # Select the tool
 
-    if "install" == opts["tool"]:
-        if pars == []:
+    if "install" == pars[0]:
+        if len(pars) < 2:
             createErrorMessage("You must specify at least one file to install.")
             return
 
         else:
-            for f in pars:
+            for f in pars[1:]:
                 createBoxTitle(f"Starting installation for install file '{f}'")
                 addontool.install(INIT_VARIABLES['addon-file'], f)
     # list
-    elif "list" == opts["tool"]:
+    elif "list" == pars[0]:
         addontool.list(INIT_VARIABLES['addon-file'])
 
     # remove
-    elif "uninstall" == opts["tool"] or "remove" == opts["tool"]:
-        if pars == []:
-            createErrorMessage("You must specify an addon to uninstall.")
+    elif "uninstall" == pars[0] or "remove" == pars[0]:
+        if len(pars) < 2:
+            createErrorMessage("You must specify at least one addon to uninstall.")
 
         else:
-            for p in pars:
+            for p in pars[1:]:
                 addontool.uninstall(INIT_VARIABLES['addon-file'], p)
 
-    elif "help" == opts["tool"]:
-        if pars == []:
+    elif "help" == pars[0]:
+        if len(pars) < 2:
             createErrorMessage("You must specify the addon.")
         
         else:
-            addontool.getHelp(INIT_VARIABLES['addon-file'], pars[0])
+            for addon in pars[1:]:
+                addontool.getHelp(INIT_VARIABLES['addon-file'], addon)
                 
 
-    elif "guide" == opts["tool"]:
-        addontool.guide(pars)
-                                
-    
+    elif "guide" == pars[0]:
+        if len(pars) < 2:
+            addontool.guide([])
+        
+        else:
+            addontool.guide(pars[1:])                
+
+    elif "clean" == pars[0]:
+        addontool.clean(INIT_VARIABLES["addon-directory"], loads(open(INIT_VARIABLES["addon-file"], "r").read()), "step-by-step" in opts)
+
     else:
         createErrorMessage(f"Unknown tool: '{opts['tool']}'")
 
@@ -915,7 +925,10 @@ def main():
             for d in os.listdir():
                 if d.lower().startswith(text.lower()):
                     if not state:
-                        return d
+                        if " " in d:
+                            return ("\"" if not d.startswith("\"") else "") + d + ("\"" if not d.endswith("\"") else "")
+                        else:
+                            return d
                 
                     else:
                         state -= 1

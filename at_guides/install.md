@@ -17,11 +17,11 @@ Addons are packages of files and folders that can be associated with a command i
 ## How do I install a lakeCLI addon package?
 Using the following command:
 ```
-at --tool:install installer.lci
+at install installer.lci
 
 or 
 
-addontool --tool:install installer.lci
+addontool install installer.lci
 ```
 
 * (Remember to replace the installer.lci with the name of the installer file.)

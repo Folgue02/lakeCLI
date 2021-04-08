@@ -4,7 +4,7 @@ from lib import *
 import os
 import shutil
 
-__version__ = 1.0
+__version__ = 1.3
 
 # Contains the essential properties for a installer file
 TEMPLATE = {
@@ -43,6 +43,7 @@ def guide(requestedGuides):
 def install(addonFile, installFile):
     validConfigurationFile = True
     addonPath = os.path.split(addonFile)[0]
+    overWriteMode = False
 
     # install file doesn't exist.
     if not os.path.isfile(installFile):
@@ -90,13 +91,27 @@ def install(addonFile, installFile):
 
             # Check that the addon doesn't exist already
             if installInfo["referenceCommand"] in currentConfig["addons"]:
-                createWarningMessage(f"There is already a command named '{installInfo['referenceCommand']}'")
+                # Update the addon if its a newer version of it
+                if installInfo["version"] > currentConfig["addons"][installInfo["referenceCommand"]]["version"]:
+                    choice = askYesNo(f"The addon you want to install ('{installInfo['version']}') its a newer version of one already installed ('{currentConfig['addons'][installInfo['referenceCommand']]['version']}'). Do you want to update it?")
+                    if choice:
+                        overWriteMode = True
+
+                    else:
+                        createWarningMessage(f"There is already a command named '{installInfo['referenceCommand']}'")
 
             # Check that there isnt a folder with the same name
             if os.path.isdir(os.path.join(os.path.split(addonFile)[0], installInfo['referenceCommand'])):
-                createErrorMessage(f"A folder for the new addon has been tried to be created, but there is already one with that name.")
-                createErrorMessage("Cancelling installation.")
-                return
+                # In case of update, the older version will be removed from the folder
+                if overWriteMode:
+                    createLogMessage(f"Removing old version of '{installInfo['referenceCommand']}'...")
+                    shutil.rmtree(os.path.join(addonPath, installInfo["referenceCommand"]))
+                
+                else:
+                    createErrorMessage("Cancelling installation.")
+                    createErrorMessage(f"A folder for the new addon has been tried to be created, but there is already one with that name.")
+
+                    return
 
             os.mkdir(os.path.join(os.path.split(addonFile)[0], installInfo['referenceCommand']))
 
@@ -239,3 +254,18 @@ def list(addonFile):
             t.addContent([a, currentConfig["addons"][a]["version"], currentConfig["addons"][a]["entryFile"]])
 
         t.printTable()
+
+
+def clean(addonPath, addonConfig,stepByStep=False):
+    # get the folders in the addonPath
+    for element in os.listdir(addonPath):
+        if os.path.isdir(os.path.join(addonPath, element)) and not element in addonConfig["addons"]:
+            if stepByStep:
+                if askYesNo(f"The folder '{element}' has been found and its not related to any addon isntalled. Do you want to remove it?"):
+                    shutil.rmtree(os.path.join(addonPath, element))
+
+            else:
+                shutil.rmtree(os.path.join(addonPath, element))
+
+    createLogMessage("Addon directory cleaned.")
+                
