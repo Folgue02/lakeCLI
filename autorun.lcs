@@ -7,7 +7,8 @@ refresh
 # Disable the option of closing the shell with ^C
 settings --change:no-ctrlc True
 
+# Enables shell execution mode (Not entirely recommended)
+settings --change:shell-execution-mode True
 
 
-echo "Autorun script's execution finished."
 
