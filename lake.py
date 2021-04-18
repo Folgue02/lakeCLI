@@ -39,6 +39,7 @@ INIT_VARIABLES = {
     "title":f"LakeCLI v{__version__}", # Title displayed
     "max-text-size":30, # Maximum length of the text displayed in tables
     "shell-execution-mode":False, # Activates the shell execution mode. (Commands that are not from lakeCLI are tried to be executed as shell commands)
+    "disable-readline":False, # Disables the usage of the readline module when asking for userinput
     "addon-directory":f"C:\\Users\\{getuser()}\\.lakeCLIAddons" if sys.platform ==  "win32" else f"/home/{getuser()}/.config/.lakeCLIAddons", # Directory that contains the addons
     "addon-file":f"C:\\Users\\{getuser()}\\.lakeCLIAddons\\.addon_config.json" if sys.platform == "win32" else f"/home/{getuser()}/.config/.lakeCLIAddons/.addon_config.json" # Location where the addon configuration file is.
 }
@@ -85,19 +86,14 @@ def executeLine(line):
 
             if INIT_VARIABLES["shell-execution-mode"]:
                 # Check for the command in the path env variables
-                if sys.platform == "win32":
-                    for p in os.environ["path"].split(";"):
-                        if command in os.listdir(p):
-                            if os.path.isfile(os.path.join(p, command)):
-                                os.system(command + " " + " ".join(args))
 
-                else:
-                    for p in os.environ["PATH"].split(":"):
+                for p in (os.getenv("PATH").split(";") if sys.platform == "win32" else os.getenv("PATH").split(":")):
+                    if not os.path.isdir(p):
+                        continue
+
+                    else:
                         if command in os.listdir(p):
-                            if os.path.isfile(os.path.join(p, command)):
-                                os.system(command + " " + " ".join(args))
-                                return
-                print(f"'{command}' its not related to any command.")
+                            os.system(f"{command} {' '.join(args)}")
 
 
             else:
@@ -874,7 +870,7 @@ def startElevatedProccess(args):
     
     if "help" in opts or pars == []:
         createHelpText({
-            "description":"Executes a process with elevated privileges (win32).",
+            "description":"Executes a process using powershell with elevated privileges (win32), in linux it will use the sudo command.",
             "usage":{
                 "sep \"<proccestoexecute> <argument1> <argument2>\"": "Starts process <proccesstoexecute> with elevated privileges and <argument1> and <argument2> as arguments."
             }
@@ -1005,9 +1001,11 @@ def main():
     
     # Change the terminal's title (only works in windows)
     os.system(f"title {INIT_VARIABLES['title']}") if sys.platform == "win32" else False
-            
-    readline.parse_and_bind("tab: complete")
-    readline.set_completer(completer)   
+
+    # Disable readline module
+    if not INIT_VARIABLES["disable-readline"]: 
+        readline.parse_and_bind("tab: complete")
+        readline.set_completer(completer)
 
     
     # Load the configuration file
