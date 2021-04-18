@@ -85,19 +85,21 @@ def executeLine(line):
 
             if INIT_VARIABLES["shell-execution-mode"]:
                 # Check for the command in the path env variables
-                if sys.platform == "win32":
-                    for p in os.environ["path"].split(";"):
-                        if command in os.listdir(p):
-                            if os.path.isfile(os.path.join(p, command)):
-                                os.system(command + " " + " ".join(args))
+                
+                # Loop to check for executables in the paths
+                for p in (os.getenv("PATH").split(";") if sys.platform == "win32" else os.getenv("PATH").split(":")):
+                    
+                    # Avoid errors (sometimes paths in windows doesn't exist.)
+                    if not os.path.isdir(p):
+                        continue
 
-                else:
-                    for p in os.environ["PATH"].split(":"):
-                        if command in os.listdir(p):
-                            if os.path.isfile(os.path.join(p, command)):
-                                os.system(command + " " + " ".join(args))
-                                return
+                    elif command in os.listdir(p):
+                        os.system(f"{command} {' '.join(args)}")
+                        return # End function
+                
+                # To reach this state the command variables must not be registered as a command of lake and it isn't system executable.
                 print(f"'{command}' its not related to any command.")
+
 
 
             else:
@@ -943,6 +945,7 @@ COMMANDS["move"] = moveElement
 COMMANDS["alias"] = alias
 COMMANDS["allcommands"] = showAllCommands
 
+COMMANDS["cls"] = lambda x: [os.system("cls") if sys.platform == "win32" else os.system("clear")]
 COMMANDS["echo"] = lambda x: [print(t) for t in x]
 COMMANDS["exit"] = lambda x: [exit(0)]
 
@@ -1013,24 +1016,22 @@ def main():
     # Load the configuration file
     if INIT_VARIABLES["run-autorun"]:
         runScript([os.path.join(os.path.split(__file__)[0], "autorun.lcs")])
-    
+
     # Main loop
     while True:
         try:
             # Create prompt
             userPrompt = f"[ {getuser().upper()} ]"
             pathPrompt = os.getcwd().replace("\\", "/").upper()[2:] if sys.platform == "win32" else os.getcwd()
-            
-            # Detect privileges, only windows
-            if sys.platform == "win32":
-                if ctypes.windll.shell32.IsUserAnAdmin():
-                    userPrompt = f"[ ADMIN ]"
 
-                else:
-                    pass
 
             # Get the user input
-            userinput = input(colored(userPrompt, on_color="on_green") + pathPrompt + "# ")
+            if sys.platform == "win32":
+                print(colored(userPrompt, on_color="on_green") + pathPrompt + "# ", end="") # Outside of input(), no colors in win32
+                userinput = input()
+
+            else:
+                userinput = input(colored(userPrompt, on_color="on_green") + pathPrompt + "# ")
 
         except KeyboardInterrupt:
             if INIT_VARIABLES["no-ctrlc"]:
