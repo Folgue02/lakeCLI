@@ -25,7 +25,7 @@ init()
 
 
 # Header
-__version__ = 1.6
+__version__ = 1.7 
 __author__ = "Folgue02"
 
 # Init variables
@@ -193,8 +193,11 @@ def listdir(args):
         if not os.path.isdir(directory):
             createErrorMessage(f"The path specified doesn't exist: '{directory}'")
             continue
-    
-        dirElements = os.listdir(directory)
+        try: 
+            dirElements = os.listdir(directory)
+        except PermissionError:
+            createErrorMessage(f"You don't have permissions to see the contents of '{directory}'.")
+            return
         files = []
         dirs = []
         # Table to display
@@ -465,14 +468,14 @@ def removeDirectory(args):
             "usage":{
                 "rmdir <directory>":"Creates <directory>",
                 "rmdir <directory> --no-warning":"Tries to remove <directory> and in case that it doesn't exist the command will quit without displaying an error.",
-                "rmdir <directory> --no-empty":"Removes the directory even if its not empty."
+                "rmdir <directory> --recursive / --r":"Removes the directory even if it's not empty."
             }
         })
 
     if "no-warning" in opts:
         noWarningMode = True
 
-    if "no-empty" in opts:
+    if "recursive" in opts or "r" in opts:
         noEmptyMode = True
 
     # Loop through the paths specified
@@ -493,7 +496,7 @@ def removeDirectory(args):
                     rmtree(path)
                 
                 else:
-                    createErrorMessage(f"The directory ('{path}')its not empty.")
+                    createErrorMessage(f"The directory ('{path}') it's not empty.")
 
             else:
                 os.rmdir(path)
@@ -537,7 +540,8 @@ def refreshAddons(args):
         createHelpText({
             "description":"Reads / changes the configuration file.",
             "usage":{
-                "refresh":"Refreshes the addon configuration."
+                "refresh":"Refreshes the configuration.",
+                "refresh --save": "Saves the current configuration in the session to the configuration file."
             }
         })
     
@@ -680,7 +684,7 @@ def addonTools(args):
         return
     createLogMessage(f"* Addon tools manager version detected: '{addontool.__version__}'")
 
-
+    # TODO When python 3.10 its released, change this into a match statement
     # Select the tool
 
     if "install" == pars[0]:
