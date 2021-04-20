@@ -94,7 +94,7 @@ def executeLine(line):
                     else:
                         if command in os.listdir(p):
                             os.system(f"{command} {' '.join(args)}")
-
+                            return
 
             else:
                 print(f"'{command}' its not related to any command.")
