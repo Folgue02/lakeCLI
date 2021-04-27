@@ -17,6 +17,8 @@ from time import ctime
 import ctypes
 import shutil
 import readline
+import re
+
 # Colors in the terminal
 from termcolor import colored
 from colorama import init
@@ -46,25 +48,31 @@ INIT_VARIABLES = {
 
 
 # Variables
-VARIABLES = {}
+VARIABLES = {"cwd":os.getcwd(),
+    "platform":sys.platform, 
+    "home":os.path.expanduser("~") if sys.platform != "win32" else os.path.join("C:","Users",getuser()),
+    "user":getuser(),
+    "version":str(__version__),
+    "pyVersion":str(sys.version_info[0:3]).replace('(', '').replace(')', '').replace(', ', '.')
+}
 COMMANDS = {} # These are the built-in commands
 ADDON_COMMANDS = {"addons":{},"aliases":{}}
-
-# CLI functions
-print(f"""
-    __          __        ________    ____
-   / /   ____ _/ /_____  / ____/ /   /  _/
-  / /   / __ `/ //_/ _ \\/ /   / /    / /  
- / /___/ /_/ / ,< /  __/ /___/ /____/ /   
-/_____/\\__,_/_/|_|\\___/\\____/_____/___/   
-                                          
-v{__version__}
-""")
 
 
 # Execute a line
 def executeLine(line):
     userinput = parseSyntax(line)
+
+    parsedResult = [] # This will contain the string with the resolved variables
+
+    for segment in userinput:
+        try:
+            parsedResult.append(resolveStringVariables(segment, VARIABLES))
+        except KeyError as e:
+            print(colored(f"The variable doesn't exist: {e}", "red"))
+            return
+
+    userinput = parsedResult 
 
     # No input into the console
     if userinput == []:
@@ -82,7 +90,6 @@ def executeLine(line):
 
         # The command doesn't exist
         if command not in COMMANDS and command not in ADDON_COMMANDS["addons"] and not command in ADDON_COMMANDS["aliases"]:
-           
 
             if INIT_VARIABLES["shell-execution-mode"]:
                 # Check for the command in the path env variables
@@ -95,6 +102,8 @@ def executeLine(line):
                         if command in os.listdir(p):
                             os.system(f"{command} {' '.join(args)}")
                             return
+                # If the function gets to this point, the command didnt exist
+                print(f"'{command}' its not related to any command.")
 
             else:
                 print(f"'{command}' its not related to any command.")
@@ -142,6 +151,7 @@ def changedir(args):
         else:
             try:
                 os.chdir(args[0])
+                VARIABLES["cwd"] = os.getcwd()
             except PermissionError:
                 createErrorMessage(f"You don't have the required permissions to enter in this path: '{args[0]}'")
 
@@ -897,6 +907,68 @@ def startElevatedProccess(args):
             except Exception as e:
                 createErrorMessage(f"Something went wrong: {e}")
 
+def varMgr(args):
+    pars, opts = parseArgs(args)
+    if "help" in opts or pars == []:
+        createHelpText({
+            "description":"Sets, modifies, and removes variables",
+            "usage":{
+                "var set <name> <value>":"Creates a variable with the name <name> that contains <value>.",
+                "var remove <name> <name1>":"Removes the variables <name> and <name1>.",
+                "var show [<name>]":"Shows all the variables stored. If a name of one has been specified, only that variable and its value will be shown."
+            }
+        })
+    
+    else:
+        # Set variable
+        if pars[0] == "set":
+            if len(pars) < 3:
+                createErrorMessage("You must specify the name and the value of the variable.")
+
+            else:
+                VARIABLES[pars[1]] = pars[2]
+       
+        # Show variables
+        elif pars[0] == "show":
+            
+            t = table(["Name", "Value"])
+            
+
+            # No var names have been specified
+            if len(pars) == 1:
+                for var in VARIABLES:
+                    t.addContent([var, VARIABLES[var]])
+
+            else:
+                for var in pars[1:]:
+                    if not var in VARIABLES:
+                        t.addContent([var, colored(f"UNKNOWN", "red")])
+                        continue
+                    
+                    else:
+                        t.addContent([var, VARIABLES[var]])
+
+            t.printTable()
+
+        # Remove the variables
+        elif pars[0] == "remove" or pars[0] == "rm":
+            if len(pars) < 2:
+                createErrorMessage("You must specify the names of the variables to remove.")
+
+            else:
+                for var in pars[1:]:
+                    if not var in VARIABLES:
+                        createErrorMessage(f"Cannot remove '{var}' since it doesn't exist.")
+
+                    else:
+                        del VARIABLES[var]
+
+        else:
+            createErrorMessage(f"Command not found: '{pars[0]}'")
+
+
+
+
 def showAllCommands(args):
     pars, opts = parseArgs(args)
     print("Remember: "+ colored("All the built-in commands will return a brief usage guide if you specify \"--help\" as a parameter.", "blue", "on_yellow"))    
@@ -938,16 +1010,13 @@ COMMANDS["sep"] = startElevatedProccess
 COMMANDS["move"] = moveElement
 COMMANDS["alias"] = alias
 COMMANDS["allcommands"] = showAllCommands
+COMMANDS["var"] = varMgr 
 
 COMMANDS["echo"] = lambda x: [print(t) for t in x]
 COMMANDS["exit"] = lambda x: [exit(0)]
 
 def main():
     print(f"""
- * Machine's operative system: {sys.platform}
- * Current user:               {getuser()}
- * Python version:             {str(sys.version_info[0:3]).replace('(', '').replace(')', '').replace(', ', '.')}
- * CLI version:                {__version__}
     """)
     pars, opts = parseArgs(sys.argv)
     
@@ -965,10 +1034,10 @@ def main():
             else:
                 
                 
-                if type(parseData(opts[argument]))!= INIT_VARIABLES[argument]:
+                if type(parseData(opts[argument]))!= type(INIT_VARIABLES[argument]):
                     createErrorMessage(f"A setting has been tried to be changed with an invalid type of value. ('{argument}')")
                 else:
-                    opts[argument] = predefinedValues[opts[argument]]
+                    opts[argument] = parseData(opts[argument])
                 
                 INIT_VARIABLES[argument] = opts[argument]
         

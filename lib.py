@@ -1,6 +1,7 @@
 from termcolor import colored
 import os
 import sys
+from fnmatch import fnmatch
 
 # This libraries only work in windows
 if sys.platform == "win32":
@@ -19,6 +20,7 @@ def createWarningMessage(msg):
 
 def createErrorMessage(msg):
     print(colored(f"[ ERROR ] ", "red") + f"{msg}")
+
 
 
 def createHelpText(template):
@@ -140,6 +142,51 @@ def parseSyntax(target):
             continue
 
     return result
+
+
+
+def resolveStringVariables(string:str, variables:dict) -> str:
+    # This function resolves all the variables inside of the string, replacing the variables written 
+    # in the string for its values
+
+    # The string contains variables
+    if fnmatch(string, "*$*$*"):
+        while True:
+            dollarPos = -1 # Contains the position of the first dollar sign found.
+
+            # In case that all the variables in the string have been resolved
+            # the loop will break
+            if not fnmatch(string, "*$*$*"):
+                break
+
+            # The loop gets executed if there are still variables in it
+            # It replaces the variables with their values, and, in case that there are two variables that are the same
+            # they both get replaced in the same loop
+            # Each loop replaces one variable.
+            for index, char in enumerate(string):
+
+                # The current character its a dollar sign
+                if char == "$":
+                    
+
+                    # if dollarPos its different from its default value, it means that the first dollarSign of the 
+                    # variable declaration has been found.
+                    # So this replaces the variable, with its value
+                    # In case that the variable doesn't exist, this will raise a KeyError exception
+                    if dollarPos != -1:
+                        string = string.replace(string[dollarPos:index+1], variables[string[dollarPos:index+1].replace("$", "")])
+                        break   # Breaks the for loop, since the string of the loop has changed
+
+                    else:
+                        dollarPos = index # Stores the location of the first dollar sign of the variable.
+
+                else:
+                    pass
+
+    return string
+
+
+
 
 def getFileAttribs(targetFile):
     targetAttribs = w.GetFileAttributes(targetFile)

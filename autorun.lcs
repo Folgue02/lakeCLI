@@ -1,6 +1,21 @@
 # This script gets executed everytime the command line its started
 # You can avoid this from happening by adding the parameter "--run-autorun:false".
 
+
+echo "                ___  __         "
+echo "|     /\  |__/ |__  /  ` |    | "
+echo "|___ /~~\ |  \ |___ \__, |___ | "
+echo "v$version$" " " " "
+
+
+echo ""
+
+echo " * Machine's operative system: $platform$"
+echo " * Current user:               $user$"
+echo " * Python version:             $pyVersion$"
+echo " * CLI version:                $version$"
+echo " " " "
+
 # Reminder
 echo "Type 'allcommands' to show all the available built-in commands."
 echo "Type '<command> --help' to get a brief usage guide of the specified command."
