@@ -920,6 +920,7 @@ def varMgr(args):
         })
     
     else:
+         
         # Set variable
         if pars[0] == "set":
             if len(pars) < 3:
@@ -962,6 +963,34 @@ def varMgr(args):
 
                     else:
                         del VARIABLES[var]
+
+        # Import command, imports variables from a file
+        elif pars[0] == "import":
+            if len(pars) == 1:
+                createErrorMessage("You must specify the files to import the variables from.")
+            
+            else:
+                for f in pars[1:]:
+                    try:
+                        content = loads(open(f, "r").read())
+                    except JSONDecodeError:
+                        createErrorMessage(f"The variables file '{f}' might be corrupted or unreadable.")
+                        continue
+                    
+                    except FileNotFoundError:
+                        createErrorMessage(f"File not found: '{f}'")
+
+                    # Import the variables to the CLI
+                    for var in content:
+                        # Check that it contains a valid type of variable
+                        if type(content[var]) != str:
+                            createErrorMessage(f"Cannot import variable '{var}' from file '{f}' since it contains an invalid type of variable.")
+                        
+                        else:
+                            varMgr(["set", var, content[var]])
+
+        elif pars[0] == "export":
+            if len(pars) == ""
 
         else:
             createErrorMessage(f"Command not found: '{pars[0]}'")
