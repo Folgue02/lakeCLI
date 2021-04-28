@@ -50,7 +50,7 @@ INIT_VARIABLES = {
 # Variables
 VARIABLES = {"cwd":os.getcwd(),
     "platform":sys.platform, 
-    "home":os.path.expanduser("~") if sys.platform != "win32" else os.path.join("C:","Users",getuser()),
+    "home":os.path.expanduser("~") if sys.platform != "win32" else f"C:\\Users\\{getuser()}",
     "user":getuser(),
     "version":str(__version__),
     "pyVersion":str(sys.version_info[0:3]).replace('(', '').replace(')', '').replace(', ', '.')
@@ -375,7 +375,7 @@ def readFile(args):
 
 
                     if index % (len(content) //(len(content) // h)) == 0: 
-                        print(f"(Page {0 if index == 0 else index // h}/{len(content)// h})<Enter>:", end="")
+                        print(f"(Page {0 if index == 0 else index // h}/{len(content)// h})<Enter>:", end="\r")
                         waitForKey("\r") # Press enter
                         print(" "*len(f"(Page {0 if index == 0 else  index // h}/{len(content)// h})<Enter>:"), end="\r")# clean the line
                         print("\r" + line)
