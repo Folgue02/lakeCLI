@@ -179,10 +179,9 @@ def resolveStringVariables(string:str, variables:dict) -> str:
 
                     else:
                         dollarPos = index # Stores the location of the first dollar sign of the variable.
-
+                
                 else:
                     pass
-
     return string
 
 

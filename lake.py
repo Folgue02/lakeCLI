@@ -927,7 +927,11 @@ def varMgr(args):
                 createErrorMessage("You must specify the name and the value of the variable.")
 
             else:
-                VARIABLES[pars[1]] = pars[2]
+                # Check validity of the var name
+                if pars[1].find("$") != -1 or pars[1].find("\"") != -1:
+                    createErrorMessage("The variable contains a forbidden character ('$', '\"')")
+                else:
+                    VARIABLES[pars[1]] = pars[2]
        
         # Show variables
         elif pars[0] == "show":
@@ -990,7 +994,22 @@ def varMgr(args):
                             varMgr(["set", var, content[var]])
 
         elif pars[0] == "export":
-            if len(pars) == ""
+            if len(pars) == 1:
+                createErrorMessage("You must specify the output file of the variable exporting.")
+
+            else:
+                # Check that the file can be created
+                if os.path.exists(pars[1]) and not "overwrite" in opts:
+                    createErrorMessage("Cannot exports the variables to the specified file since it already exists. (use \"--overwrite\" to overwrite the specified file.)")
+
+                else:
+                    try:
+                        open(pars[1], "w").write(dumps(VARIABLES, indent=2))
+                    except PermissionError:
+                        createErrorMessage(f"You don't own the permissions to write in this file. ('{pars[1]}')")
+
+
+
 
         else:
             createErrorMessage(f"Command not found: '{pars[0]}'")
