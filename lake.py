@@ -27,7 +27,7 @@ init()
 
 
 # Header
-__version__ = 1.6
+__version__ = 1.8 
 __author__ = "Folgue02"
 
 # Init variables
@@ -42,6 +42,7 @@ INIT_VARIABLES = {
     "max-text-size":30, # Maximum length of the text displayed in tables
     "shell-execution-mode":False, # Activates the shell execution mode. (Commands that are not from lakeCLI are tried to be executed as shell commands)
     "disable-readline":False, # Disables the usage of the readline module when asking for userinput
+    "prompt":"%w%U# ", # Prompt to be displayed in the CLI
     "addon-directory":f"C:\\Users\\{getuser()}\\.lakeCLIAddons" if sys.platform ==  "win32" else f"/home/{getuser()}/.config/.lakeCLIAddons", # Directory that contains the addons
     "addon-file":f"C:\\Users\\{getuser()}\\.lakeCLIAddons\\.addon_config.json" if sys.platform == "win32" else f"/home/{getuser()}/.config/.lakeCLIAddons/.addon_config.json" # Location where the addon configuration file is.
 }
@@ -121,10 +122,16 @@ def executeLine(line):
                     errorToDisplay = e if not INIT_VARIABLES["debug"] else traceback.format_exc()
                     createErrorMessage(f"Exception triggered in built-in command.\nException: '{traceback.format_exc() if 'debug' in INIT_VARIABLES else e}'")
 
-            # The command its a an alias
+            # The command its an alias
             elif command in ADDON_COMMANDS["aliases"]:
                 line = ADDON_COMMANDS["aliases"][command] + " ".join(args)
-                executeLine(line) # FIX RECURSION ERROR WHEN AN ALIAS CONTAINS ANOTHER ALIAS AS VALUE
+
+                # Avoid recursion (the alias references another alias, which it creates and endless loop)
+                if ADDON_COMMANDS["aliases"][command] in ADDON_COMMANDS["aliases"]:
+                    createErrorMessage(f"Cannot execute this alias since it references another alias. ('{command}')")
+
+                else:
+                    executeLine(line) # FIX RECURSION ERROR WHEN AN ALIAS CONTAINS ANOTHER ALIAS AS VALUE
             
             # Addon commands
             else:
@@ -1128,24 +1135,40 @@ def main():
     # Load the configuration file
     if INIT_VARIABLES["run-autorun"]:
         runScript([os.path.join(os.path.split(__file__)[0], "autorun.lcs")])
+
+
+    # Define user prompt special chars that will be replaced later
+    userPromptChars = {
+        "%U":colored(f"[ {getuser().upper()} ]", on_color="on_green"), # Name of the user
+        "%u":getuser()                                              # Name of the user (raw)
+    }
     
+
     # Main loop
     while True:
         try:
-            # Create prompt
-            userPrompt = f"[ {getuser().upper()} ]"
-            pathPrompt = os.getcwd().replace("\\", "/").upper()[2:] if sys.platform == "win32" else os.getcwd()
+
+            # %u -> [ USER ]
+            # %W -> *embedded working directory*
+            # %w -> current working directory
+                        # Create prompt
+
+            # This prompt chars need to be updated every time.
+            userPromptChars["%W"] = os.getcwd().replace("\\", "/").upper()[2:] if sys.platform == "win32" else os.getcwd(), 
+            userPromptChars["%w"] = os.getcwd(),                                           
+            userPromptChars["%c"] = os.path.split(os.getcwd())[1]                  
             
-            # Detect privileges, only windows
-            if sys.platform == "win32":
-                if ctypes.windll.shell32.IsUserAnAdmin():
-                    userPrompt = f"[ ADMIN ]"
+            userPrompt = INIT_VARIABLES["prompt"]
+
+            # Replace the special characters with the ones declared
+            for c in userPromptChars:
+                if c in userPrompt:
+                    userPrompt = userPrompt.replace(c, str(userPromptChars[c])) # TODO Fix things becoming tuples
 
                 else:
-                    pass
+                    continue
 
-            # Get the user input
-            userinput = input(colored(userPrompt, on_color="on_green") + pathPrompt + "# ")
+            userinput = input(userPrompt)
 
         except KeyboardInterrupt:
             if INIT_VARIABLES["no-ctrlc"]:
