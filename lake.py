@@ -42,7 +42,7 @@ INIT_VARIABLES = {
     "max-text-size":30, # Maximum length of the text displayed in tables
     "shell-execution-mode":False, # Activates the shell execution mode. (Commands that are not from lakeCLI are tried to be executed as shell commands)
     "disable-readline":False, # Disables the usage of the readline module when asking for userinput
-    "prompt":"%w%U# ", # Prompt to be displayed in the CLI
+    "prompt":"%U%w# ", # Prompt to be displayed in the CLI
     "addon-directory":f"C:\\Users\\{getuser()}\\.lakeCLIAddons" if sys.platform ==  "win32" else f"/home/{getuser()}/.config/.lakeCLIAddons", # Directory that contains the addons
     "addon-file":f"C:\\Users\\{getuser()}\\.lakeCLIAddons\\.addon_config.json" if sys.platform == "win32" else f"/home/{getuser()}/.config/.lakeCLIAddons/.addon_config.json" # Location where the addon configuration file is.
 }
@@ -1139,23 +1139,17 @@ def main():
 
     # Define user prompt special chars that will be replaced later
     userPromptChars = {
-        "%U":colored(f"[ {getuser().upper()} ]", on_color="on_green"), # Name of the user
-        "%u":getuser()                                              # Name of the user (raw)
+        "%U":colored(f"[ {getuser().upper()} ]", on_color="on_green"),
+        "%u":getuser()
     }
     
 
     # Main loop
     while True:
         try:
-
-            # %u -> [ USER ]
-            # %W -> *embedded working directory*
-            # %w -> current working directory
-                        # Create prompt
-
             # This prompt chars need to be updated every time.
-            userPromptChars["%W"] = os.getcwd().replace("\\", "/").upper()[2:] if sys.platform == "win32" else os.getcwd(), 
-            userPromptChars["%w"] = os.getcwd(),                                           
+            userPromptChars["%W"] = os.getcwd().replace("\\", "/").upper()[2:] if sys.platform == "win32" else os.getcwd() 
+            userPromptChars["%w"] = os.getcwd()
             userPromptChars["%c"] = os.path.split(os.getcwd())[1]                  
             
             userPrompt = INIT_VARIABLES["prompt"]
