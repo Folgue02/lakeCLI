@@ -131,7 +131,7 @@ def executeLine(line):
                     createErrorMessage(f"Cannot execute this alias since it references another alias. ('{command}')")
 
                 else:
-                    executeLine(line) # FIX RECURSION ERROR WHEN AN ALIAS CONTAINS ANOTHER ALIAS AS VALUE
+                    executeLine(line)
             
             # Addon commands
             else:
@@ -142,8 +142,6 @@ def executeLine(line):
                 except Exception as e:
                     createErrorMessage(f"Exception triggered in addon's command.\nException: '{e}'")
 
-    
-    
 
 #builtin commands
 def changedir(args):
@@ -1139,7 +1137,7 @@ def main():
 
     # Define user prompt special chars that will be replaced later
     userPromptChars = {
-        "%U":colored(f"[ {getuser().upper()} ]", on_color="on_green"),
+        "%U":f"[ {getuser().upper()} ]",
         "%u":getuser()
     }
     
@@ -1161,7 +1159,6 @@ def main():
 
                 else:
                     continue
-
             userinput = input(userPrompt)
 
         except KeyboardInterrupt:
