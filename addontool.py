@@ -4,7 +4,7 @@ from lib import *
 import os
 import shutil
 
-__version__ = 1.3
+__version__ = 1.4
 
 # Contains the essential properties for a installer file
 TEMPLATE = {
@@ -14,6 +14,73 @@ TEMPLATE = {
     "entryFile":str,
     "version":float
 }
+
+
+def main(addon_directory, addon_file, arguments):
+    pars, opts = parseArgs(arguments)
+
+    if pars == [] or "help" in opts:
+        createHelpText({
+            "description":"Tool for addons management.",
+            "usage":{
+                "addontool install <installfile>":"Installs the addon specified in the install file.",
+                "addontool remove <addon>":"Removes the <addon> from the installed addons (includes its installation folder).",
+                "addontool list":"Lists the installed addons.",
+                "addontool help <addon>":"Shows the help of the addon specified.",
+                "addontool guide <guidename>":"Displays a guide specified in the arguments, if nothing its specified, it will show all the available guides.",
+                "addontool clean (--step-by-step)":"Cleans the addon folder. (Removes folders that are not related to any addon). --step-by-step asks for removal per folder."
+            }
+        })
+        return
+
+    print(f"* Addon tools version: '{__version__}'")
+
+
+    # Select the tool
+
+    if "install" == pars[0]:
+        if len(pars) < 2:
+            install(addon_file)
+        else:
+            for f in pars[1:]:
+                createBoxTitle(f"Starting installation for install file '{f}'")
+                install(addon_file, f)
+
+    # list
+    elif "list" == pars[0]:
+        list(addon_file)
+
+    # remove
+    elif "uninstall" == pars[0] or "remove" == pars[0]:
+        if len(pars) < 2:
+            createErrorMessage("You must specify at least one addon to uninstall.")
+
+        else:
+            for p in pars[1:]:
+                uninstall(addon_file, p)
+
+    elif "help" == pars[0]:
+        if len(pars) < 2:
+            createErrorMessage("You must specify the addon.")
+
+        else:
+            for addon in pars[1:]:
+                getHelp(addon_file, addon)
+
+
+    elif "guide" == pars[0]:
+        if len(pars) < 2:
+            guide([])
+
+        else:
+            guide(pars[1:])
+
+    elif "clean" == pars[0]:
+        clean(addon_directory, loads(open(addon_file, "r").read()), "step-by-step" in opts)
+
+    else:
+        createErrorMessage(f"Unknown tool: '{pars[0]}'")
+
 
 def guide(requestedGuides):
     guides = {
@@ -40,7 +107,7 @@ def guide(requestedGuides):
 
 
 
-def install(addonFile, installFile):
+def install(addonFile, installFile="installer.lci"):
     validConfigurationFile = True
     addonPath = os.path.split(addonFile)[0]
     overWriteMode = False
@@ -75,7 +142,7 @@ def install(addonFile, installFile):
                     createErrorMessage(f"This property's type its invalid: '{prop}' should be a '{TEMPLATE[prop]}', instead, it is a '{type(installInfo[prop])}'.")
                     validConfigurationFile = False
 
-        # The install file its corrupte or wrong
+        # The install file its corrupted or wrong
         if not validConfigurationFile:
             createErrorMessage(f"The install file specified its not valid due to the previous reasons specified. ('{installFile}')")
 
@@ -91,14 +158,22 @@ def install(addonFile, installFile):
 
             # Check that the addon doesn't exist already
             if installInfo["referenceCommand"] in currentConfig["addons"]:
-                # Update the addon if its a newer version of it
-                if installInfo["version"] > currentConfig["addons"][installInfo["referenceCommand"]]["version"]:
-                    choice = askYesNo(f"The addon you want to install ('{installInfo['version']}') its a newer version of one already installed ('{currentConfig['addons'][installInfo['referenceCommand']]['version']}'). Do you want to update it?")
-                    if choice:
-                        overWriteMode = True
+                text = f"The addon you want to install ('{installInfo['version']}') its a newer version of one already installed ('{currentConfig['addons'][installInfo['referenceCommand']]['version']}'). Do you want to update it?"
 
-                    else:
-                        createWarningMessage(f"There is already a command named '{installInfo['referenceCommand']}'")
+                # Same version
+                if installInfo["version"] == currentConfig['addons'][installInfo['referenceCommand']]['version']:
+                    text = f"The addon you want to install its the same version as the one already installed. Do you want to reinstall it?"
+
+                elif installInfo["version"] < currentConfig['addons'][installInfo['referenceCommand']]['version']:
+                    text = f"The addon you want to install ('{installInfo['version']}') its an older version of the one already installed ('{currentConfig['addons'][installInfo['referenceCommand']]['version']}'). Are you sure you want to downgrade it?"
+
+
+                choice = askYesNo(text)
+                if choice:
+                    overWriteMode = True
+
+                else:
+                    createWarningMessage(f"There is already a command named '{installInfo['referenceCommand']}'")
 
             # Check that there isnt a folder with the same name
             if os.path.isdir(os.path.join(os.path.split(addonFile)[0], installInfo['referenceCommand'])):
@@ -268,4 +343,7 @@ def clean(addonPath, addonConfig,stepByStep=False):
                 shutil.rmtree(os.path.join(addonPath, element))
 
     createLogMessage("Addon directory cleaned.")
-                
+
+
+if __name__ == "__main__":
+    print("This script its not meant to be run independently.")

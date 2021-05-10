@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 # Imports of the same project
-
-
 from lib import *
+# The addons tool its not necessary
+# So its outside of the project, and it can be imported or not
+try:
+    import addontool
+
+except ModuleNotFoundError:
+    createWarningMessage("Couldn't find the addon tools module.")
+
+
 
 # External imports (misc)
 from json import loads, dumps, JSONDecodeError
@@ -27,7 +34,7 @@ init()
 
 
 # Header
-__version__ = 1.8 
+__version__ = 1.9
 __author__ = "Folgue02"
 
 # Init variables
@@ -505,7 +512,10 @@ def removeDirectory(args):
                     createErrorMessage(f"The directory ('{path}')its not empty.")
 
             else:
-                os.rmdir(path)
+                try:
+                    os.rmdir(path)
+                except PermissionError:
+                    createErrorMessage(f"Cannot remove folder '{path}', you lack the permissions for the operation.")
 
 
 def removeFile(args):
@@ -667,76 +677,12 @@ def printWorkingDirectory(args):
 def addonTools(args):
     pars, opts = parseArgs(args)
 
-    if pars == [] or "help" in opts:
-        createHelpText({
-            "description":"Tool for addons management.",
-            "usage":{
-                "addontool install <installfile>":"Installs the addon specified in the install file.",
-                "addontool remove <addon>":"Removes the <addon> from the installed addons (includes its installation folder).",
-                "addontool list":"Lists the installed addons.",
-                "addontool help <addon>":"Shows the help of the addon specified.",
-                "addontool clean (--step-by-step)":"Cleans the addon folder. (Removes folders that are not related to any addon). --step-by-step asks for removal per folder."
-            }
-        })
-        return
-
-    createLogMessage("Importing addon tools module...")
-    try:
-        import addontool
-    except Exception as e:
-        createErrorMessage("Cannot import the install module due to the following reason:")
-        createErrorMessage(e)
-        return
-    createLogMessage(f"* Addon tools manager version detected: '{addontool.__version__}'")
-
-
-    # Select the tool
-
-    if "install" == pars[0]:
-        if len(pars) < 2:
-            createErrorMessage("You must specify at least one file to install.")
-            return
-
-        else:
-            for f in pars[1:]:
-                createBoxTitle(f"Starting installation for install file '{f}'")
-                addontool.install(INIT_VARIABLES['addon-file'], f)
-    # list
-    elif "list" == pars[0]:
-        addontool.list(INIT_VARIABLES['addon-file'])
-
-    # remove
-    elif "uninstall" == pars[0] or "remove" == pars[0]:
-        if len(pars) < 2:
-            createErrorMessage("You must specify at least one addon to uninstall.")
-
-        else:
-            for p in pars[1:]:
-                addontool.uninstall(INIT_VARIABLES['addon-file'], p)
-
-    elif "help" == pars[0]:
-        if len(pars) < 2:
-            createErrorMessage("You must specify the addon.")
-        
-        else:
-            for addon in pars[1:]:
-                addontool.getHelp(INIT_VARIABLES['addon-file'], addon)
-                
-
-    elif "guide" == pars[0]:
-        if len(pars) < 2:
-            addontool.guide([])
-        
-        else:
-            addontool.guide(pars[1:])                
-
-    elif "clean" == pars[0]:
-        addontool.clean(INIT_VARIABLES["addon-directory"], loads(open(INIT_VARIABLES["addon-file"], "r").read()), "step-by-step" in opts)
+    if not "addontool" in globals():
+        createErrorMessage("Addon tool manager couldn't be found when initializing.")
 
     else:
-        createErrorMessage(f"Unknown tool: '{pars[0]}'")
-
-    del addontool
+        # Select the tool
+        addontool.main(INIT_VARIABLES["addon-directory"], INIT_VARIABLES["addon-file"], args) # TODO make this the main and only function
 
 def moveElement(args):
     pars, opts = parseArgs(args)
@@ -1142,7 +1088,7 @@ def main():
     }
     
 
-    # Main loop
+    # Main loop[ FOLGUE ]/home/folgue
     while True:
         try:
             # This prompt chars need to be updated every time.
