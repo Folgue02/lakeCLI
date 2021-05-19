@@ -29,5 +29,5 @@ settings --change:no-ctrlc True
 # Enables shell execution mode 
 settings --change:shell-execution-mode True
 
-
-
+# Import variables to replace special characters
+var import variables.json

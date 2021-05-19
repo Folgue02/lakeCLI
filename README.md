@@ -1,6 +1,6 @@
 # Lake Command Line Interface
 
-## Gettin started
+## Getting started
 LakeCLI its a command line made with python, it contains different built-in commands and the possibility to add addons.
 
 ### Requirements

@@ -129,7 +129,7 @@ def executeLine(line):
                     errorToDisplay = e if not INIT_VARIABLES["debug"] else traceback.format_exc()
                     createErrorMessage(f"Exception triggered in built-in command.\nException: '{traceback.format_exc() if 'debug' in INIT_VARIABLES else e}'")
 
-            # The command its an alias
+            # Alias
             elif command in ADDON_COMMANDS["aliases"]:
                 line = ADDON_COMMANDS["aliases"][command] + " ".join(args)
 
@@ -148,6 +148,9 @@ def executeLine(line):
 
                 except Exception as e:
                     createErrorMessage(f"Exception triggered in addon's command.\nException: '{e}'")
+
+                except KeyboardInterrupt:
+                    createErrorMessage(f"Operation cancelled manually by user.")
 
 
 #builtin commands
@@ -767,7 +770,9 @@ def settings(args):
             "description":"A command for modifying or showing the settings of the cli.",
             "usage":{
                 "settings --show <setting>":"Prints the value of the setting <setting>. If <setting> its not specified, it will print the values for all the settings.",
-                "settings --change:<setting> <value>":"Modifies the value of <setting>, setting the new value, <value>."
+                "settings --change:<setting> <value>":"Modifies the value of <setting>, setting the new value, <value>.",
+                "settings --export <settingsfile>":"Exports the current settings to a json file. (If <settingsfile> its not specified, it will be set to 'settings.json' by default)",
+                "settings --import <settingsfile>":"Imports settings configuration from <settingsfile>. (If <settingsfile> its not specified, it will be set to 'settings.json' by default)"
             }
         })
         
@@ -789,7 +794,7 @@ def settings(args):
                         t.addContent([s, INIT_VARIABLES[s], type(INIT_VARIABLES[s])])
             t.printTable()
                     
-        if "change" in opts:
+        elif "change" in opts:
             targetSetting = opts["change"]
             
             # No new value for the setting
@@ -805,6 +810,47 @@ def settings(args):
                 
                 else:
                     INIT_VARIABLES[opts["change"]] = parseData(pars[0])
+
+        elif "export" in opts:
+            output_file = "settings.json"
+
+            if pars != []:
+                output_file = pars[0]
+            
+            try:
+                open(output_file, "w").write(dumps(INIT_VARIABLES))
+
+            except Exception as e:
+                createErrorMessage(f"Cannot export settings to file '{output_file}' due to the following reason: {e}")
+
+        elif "import" in opts:
+            input_file = "settings.json"
+
+            if pars != []:
+                input_file = pars[0]
+
+            try:
+                target_content = loads(open(input_file, "r").read())
+
+            except PermissionError:
+                createErrorMessage("Not enough permissions to read the specified file.")
+
+            except JSONDecodeError:
+                createErrorMessage("The specified file might be corrupt.")
+
+            for key in INIT_VARIABLES:
+                if not key in target_content:
+                    pass
+
+                else:
+                    if not isinstance(target_content[key], type(INIT_VARIABLES[key])):
+                        createErrorMessage(f"Cannot import setting '{key}' due to being an invalid type of variable.")
+
+                    else:
+                        INIT_VARIABLES[key] = target_content[key]
+
+        else:
+            createErrorMessage("A non valid parameter was specified.")
 
 def runScript(args):
     pars, opts = parseArgs(args)

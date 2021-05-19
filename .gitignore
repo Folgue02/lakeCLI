@@ -1,3 +1,5 @@
 *.txt
 test.*
 tst/
+.idea
+__pycache__/
