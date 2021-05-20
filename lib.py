@@ -13,13 +13,13 @@ else:
     import keyboard
 
 def createLogMessage(msg):
-    print(colored("[ LOG ] ", "green") + f"{msg}")
+    print(colored("LOG: ", "green") + f"{msg}")
 
 def createWarningMessage(msg):
-    print(colored(f"[ WARNING ] ", "yellow") +  f"{msg}")
+    print(colored(f"WARNING: ", "yellow") +  f"{msg}")
 
 def createErrorMessage(msg):
-    print(colored(f"[ ERROR ] ", "red") + f"{msg}")
+    print(colored(f"ERROR: ", "red") + f"{msg}")
 
 
 
@@ -59,8 +59,22 @@ def parseData(data):
     return data
     
 
+def returnFileMatches(pattern: str) -> list:
+    result = []
 
-    
+    path_to_look = os.path.split(pattern)[0]
+    pattern = os.path.split(pattern)[1]
+
+    if path_to_look == "":
+        path_to_look = "."
+
+    for x in os.listdir(path_to_look):
+        if fnmatch(x, pattern):
+            result.append(os.path.join(path_to_look, x))
+
+    return result
+
+
     
 def waitForKey(key):
     while True:

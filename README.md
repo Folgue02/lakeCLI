@@ -4,11 +4,12 @@
 LakeCLI its a command line made with python, it contains different built-in commands and the possibility to add addons.
 
 ### Requirements
-*Operative System*: Windows
-*Python version*:Python 3.X (Newer versions might need 3.10 or above due to new syntax)
-*Python libraries*:
-- Termcolor
-- Colorama
+- *Operative System*: Windows
+- *Python version*:Python 3.X (Newer versions might need 3.10 or above due to new syntax)
+- *Python libraries*:
+	- termcolor
+	- colorama
+	- keyboard
 
 
 ### Installing

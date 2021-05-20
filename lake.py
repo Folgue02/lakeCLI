@@ -34,7 +34,7 @@ init()
 
 
 # Header
-__version__ = 1.9
+__version__ = 2.0
 __author__ = "Folgue02"
 
 # Init variables
@@ -50,6 +50,8 @@ INIT_VARIABLES = {
     "shell-execution-mode":False, # Activates the shell execution mode. (Commands that are not from lakeCLI are tried to be executed as shell commands)
     "disable-readline":False, # Disables the usage of the readline module when asking for userinput
     "prompt":"%U%w# ", # Prompt to be displayed in the CLI
+    "save-history":True, # Save the commands used in a file, separated by lines
+    "history-file":f"C:\\Users\\{getuser()}\\.lakeCLIAddons\\history.txt" if sys.platform ==  "win32" else f"/home/{getuser()}/.config/.lakeCLIAddons/history.txt", # File where the commands used will be saved.
     "addon-directory":f"C:\\Users\\{getuser()}\\.lakeCLIAddons" if sys.platform ==  "win32" else f"/home/{getuser()}/.config/.lakeCLIAddons", # Directory that contains the addons
     "addon-file":f"C:\\Users\\{getuser()}\\.lakeCLIAddons\\.addon_config.json" if sys.platform == "win32" else f"/home/{getuser()}/.config/.lakeCLIAddons/.addon_config.json" # Location where the addon configuration file is.
 }
@@ -71,6 +73,23 @@ ADDON_COMMANDS = {"addons":{},"aliases":{}}
 def executeLine(line):
     userinput = parseSyntax(line)
 
+    if line.startswith("#") or line.strip() == "":
+        return
+
+    # Save the command in the history file.
+    if INIT_VARIABLES["save-history"]:
+        if not os.path.isfile(INIT_VARIABLES["history-file"]):
+            createWarningMessage(f"save-history setting enabled, but the history file doesn't exist, creating it...")
+            try:
+                open(INIT_VARIABLES["history-file"], "w").write(line + "\n")
+            except Exception as e:
+                createErrorMessage(f"Cannot create history file in path '{INIT_VARIABLES['history-file']}' due to the following reason: '{e}'\n, You can disable file history with the command 'settings --change:save-history False'") 
+
+        else:
+            oldContent = open(INIT_VARIABLES["history-file"], "r").read()
+            open(INIT_VARIABLES["history-file"], "w").write(oldContent + line + "\n")
+
+
     parsedResult = [] # This will contain the string with the resolved variables
 
     for segment in userinput:
@@ -86,8 +105,6 @@ def executeLine(line):
     if userinput == []:
         pass
 
-    elif userinput[0].startswith("#"):
-        pass
 
 
     # Decide what to do with the input
@@ -107,9 +124,17 @@ def executeLine(line):
                         continue
 
                     else:
-                        if command in os.listdir(p):
+                        if sys.platform == "win32":
+                            if command in os.listdir(p):
+                                os.system(f"{command} {' '.join(args)}")
+
+                            elif command + ".exe" in os.listdir(p):
+                                os.system(f"{command + '.exe'} {' '.join(args)}")
+
+                        elif command in os.listdir(p):
                             os.system(f"{command} {' '.join(args)}")
                             return
+
                 # If the function gets to this point, the command didnt exist
                 print(f"'{command}' its not related to any command.")
 
@@ -127,7 +152,7 @@ def executeLine(line):
                     COMMANDS[command](args)
                 except Exception as e:
                     errorToDisplay = e if not INIT_VARIABLES["debug"] else traceback.format_exc()
-                    createErrorMessage(f"Exception triggered in built-in command.\nException: '{traceback.format_exc() if 'debug' in INIT_VARIABLES else e}'")
+                    createErrorMessage(f"Exception triggered in built-in command.\nException: '{errorToDisplay}'")
 
             # Alias
             elif command in ADDON_COMMANDS["aliases"]:
@@ -357,8 +382,18 @@ def readFile(args):
     if "pause" in opts:
         pauseMode = True
 
+    targets = []
+    for x in pars:
+        results = returnFileMatches(x)
 
-    for file in pars:
+        if results != []:
+            for r in results:
+                targets.append(r)
+
+        else:
+            pass
+
+    for file in targets:
         # The file doesn't exist
         if not os.path.isfile(file):
             createErrorMessage(f"This file doesn't exist: '{file}'")
@@ -410,7 +445,7 @@ def readFile(args):
                     
                 except UnicodeDecodeError:
                     createErrorMessage(f"Cannot decode the specified file ('{file}').")
-            print(f"\n{20*'-'} END OF FILE '{file}'")
+            print(f"{20*'-'} END OF FILE '{file}'")
 
 
 def createDirectory(args):
@@ -494,8 +529,21 @@ def removeDirectory(args):
     if "no-empty" in opts:
         noEmptyMode = True
 
+    # Turn the parameters into a list of matches
+    targets = []
+    for x in pars:
+        results = returnFileMatches(x)
+
+        if results != []:
+            for r in results:
+                targets.append(r)
+
+        else:
+            pass
+
+
     # Loop through the paths specified
-    for path in pars:
+    for path in targets:
 
         # Path doesn't exist
         if not os.path.isdir(path):
@@ -533,7 +581,19 @@ def removeFile(args):
             }
         })
 
-    for file in pars:
+    targets = []
+    for x in pars:
+        results = returnFileMatches(x)
+
+        if results != []:
+            for r in results:
+                targets.append(r)
+
+        else:
+            pass
+
+
+    for file in targets:
         if not os.path.isfile(file):
             if "no-warning" in opts:
                 continue
@@ -699,14 +759,24 @@ def moveElement(args):
         })
     
     else:
-        try:
-            createLogMessage(f"Moving '{pars[0]}' to destiny '{pars[1]}'...")
-            shutil.move(pars[0], pars[1])
-            
-        except Exception as e:
-            createErrorMessage(f"Cannot do operation due to the following error: '{e}'")
-    
-def copyFile(args):
+        count = 0
+        # TODO, improve this part of code to warn when some file will be replaced etc...
+        targets = returnFileMatches(pars[0])
+        for file in returnFileMatches(pars[0]):
+            # Try to move file or folder
+            try:
+                createLogMessage(f"Moving element '{file}' to destiny '{pars[1]}'")
+                shutil.move(file, pars[1])
+                count += 1
+            except Exception as e:
+                createErrorMessage(f"Couldn't move element '{file}' to destiny '{pars[1]}' due to the following reason: '{e}'")
+
+        createLogMessage(f"'{count}' file/s or folder/s moved.")
+
+
+
+
+def copy(args):
     pars, opts = parseArgs(args)
     
     if "help" in opts or pars == []:
@@ -722,46 +792,15 @@ def copyFile(args):
         createErrorMessage("You must specify only two arguments, the file to copy, and its destiny.")
         
     else:
-        # File doesn't exist
-        if not os.path.isfile(pars[0]):
-            createErrorMessage(f"Cannot copy file '{pars[0]}', file not found.")
-                
-        else:
-            # Read content of file and then write it into the destiny.
-            binContent = open(pars[0], "rb").read()
-                
-            # Destiny file exists
-            if os.path.isfile(pars[1]) and not "overwrite" in opts:
-                createErrorMessage(f"Cannot copy '{pars[0]}' into '{pars[1]}' because the file already exists. (Use \"--overwrite\" to avoid this error.)")
-            
-            # Write the content of the file
-            else:
-                open(pars[1], "wb").write(binContent)
+        for target in returnFileMatches(pars[0]):
+            try:
+                shutil.copy(target, pars[1])
 
-                
-    
-def copyDirectory(args):
-    pars, opts = parseArgs(args)
+            except Exception as e:
+                createErrorMessage(f"Cannot copy '{target}' to destiny '{pars[1]}' due to the following reason: '{e}'")
 
-    if "help" in opts or pars == []:
-        createHelpText({
-            "description":"Copies a directory (includes its child directories and files) into a destiny.",
-            "usage":{
-                "copyd <directory> <destiny>":"Copies <directory> to <destiny>."
-            }
-        })
-        
+
     
-    elif len(pars) != 2:
-        createErrorMessage("You must specify only two arguments, the directory to copy and its destiny.")
-            
-    else:
-        if not os.path.isdir(pars[0]):
-            createErrorMessage(f"Cannot copy folder '{pars[0]}', folder not found.")
-            
-        else:
-            shutil.copytree(pars[0], pars[1])
-                
 def settings(args):
     pars, opts = parseArgs(args)
     
@@ -1011,8 +1050,40 @@ def varMgr(args):
         else:
             createErrorMessage(f"Command not found: '{pars[0]}'")
 
+def showHistory(args):
+    pars, opts = parseArgs(args)
+
+    if not INIT_VARIABLES["save-history"]:
+        createWarningMessage("Setting 'save-history' is disabled. Enable it with command 'settings --change:save-history True'")
+
+    elif "help" in opts:
+        createHelpText({
+            "description":"Display a list of the commands used.",
+            "usage":{
+                "history":"Displays a list of the commands used.",
+                "history --exec:<commandindex>":"Executes the command related to <commandindex> in the history file. (Not available)" # TODO
+            }
+        })
+
+    else:
+        t = table(["Index", "Command"])
+
+        try:
+            content = open(INIT_VARIABLES["history-file"], "r").read()
+        except Exception as e:
+            createErrorMessage(f"Cannot open history file in location '{INIT_VARIABLES['history-file']}' due to the following reason: '{e}'")
+
+        for index, line in enumerate(content.split("\n")):
+            t.addContent([index, line])
+
+        t.printTable()
 
 
+
+
+
+
+# TODO? Inspect command
 
 def showAllCommands(args):
     pars, opts = parseArgs(args)
@@ -1048,14 +1119,14 @@ COMMANDS["refresh"] = refreshAddons
 COMMANDS["addontool"] = addonTools
 COMMANDS["at"] = addonTools
 COMMANDS["run"] = runScript
-COMMANDS["copyf"]= copyFile
-COMMANDS["copyd"]= copyDirectory
+COMMANDS["copy"] = copy
 COMMANDS["settings"] = settings
 COMMANDS["sep"] = startElevatedProccess
 COMMANDS["move"] = moveElement
 COMMANDS["alias"] = alias
 COMMANDS["allcommands"] = showAllCommands
-COMMANDS["var"] = varMgr 
+COMMANDS["var"] = varMgr
+COMMANDS["history"] = showHistory
 
 COMMANDS["echo"] = lambda x: [print(t) for t in x]
 COMMANDS["exit"] = lambda x: [exit(0)]
