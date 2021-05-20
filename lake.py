@@ -127,16 +127,19 @@ def executeLine(line):
                         if sys.platform == "win32":
                             if command in os.listdir(p):
                                 os.system(f"{command} {' '.join(args)}")
+                                return
 
                             elif command + ".exe" in os.listdir(p):
                                 os.system(f"{command + '.exe'} {' '.join(args)}")
+                                return
 
-                        elif command in os.listdir(p):
-                            os.system(f"{command} {' '.join(args)}")
-                            return
+                        else:
+                            if command in os.listdir(p):
+                                os.system(f"{command} {' '.join(args)}")
+                                return
 
                 # If the function gets to this point, the command didnt exist
-                print(f"'{command}' its not related to any command.")
+                print(f"'{command}' its not related to any command.2")
 
             else:
                 print(f"'{command}' its not related to any command.")
@@ -1013,12 +1016,14 @@ def varMgr(args):
                 for f in pars[1:]:
                     try:
                         content = loads(open(f, "r").read())
+                        
                     except JSONDecodeError:
                         createErrorMessage(f"The variables file '{f}' might be corrupted or unreadable.")
                         continue
                     
                     except FileNotFoundError:
                         createErrorMessage(f"File not found: '{f}'")
+                        continue
 
                     # Import the variables to the CLI
                     for var in content:
