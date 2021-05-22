@@ -2,7 +2,7 @@
 # Imports of the same project
 from lib import *
 # The addons tool its not necessary
-# So its outside of the project, and it can be imported or not
+# So its outside of the main file, and the main file can be executed without the addons tool 
 try:
     import addontool
 
@@ -76,6 +76,8 @@ def executeLine(line):
     if line.startswith("#") or line.strip() == "":
         return
 
+    parsedResult = [] # This will contain the string with the resolved variables
+
     # Save the command in the history file.
     if INIT_VARIABLES["save-history"]:
         if not os.path.isfile(INIT_VARIABLES["history-file"]):
@@ -88,9 +90,6 @@ def executeLine(line):
         else:
             oldContent = open(INIT_VARIABLES["history-file"], "r").read()
             open(INIT_VARIABLES["history-file"], "w").write(oldContent + line + "\n")
-
-
-    parsedResult = [] # This will contain the string with the resolved variables
 
     for segment in userinput:
         try:
@@ -748,7 +747,7 @@ def addonTools(args):
 
     else:
         # Select the tool
-        addontool.main(INIT_VARIABLES["addon-directory"], INIT_VARIABLES["addon-file"], args) # TODO make this the main and only function
+        addontool.main(INIT_VARIABLES["addon-directory"], INIT_VARIABLES["addon-file"], args) 
 
 def moveElement(args):
     pars, opts = parseArgs(args)
@@ -763,7 +762,6 @@ def moveElement(args):
     
     else:
         count = 0
-        # TODO, improve this part of code to warn when some file will be replaced etc...
         targets = returnFileMatches(pars[0])
         for file in returnFileMatches(pars[0]):
             # Try to move file or folder
@@ -1066,23 +1064,44 @@ def showHistory(args):
             "description":"Display a list of the commands used.",
             "usage":{
                 "history":"Displays a list of the commands used.",
-                "history --exec:<commandindex>":"Executes the command related to <commandindex> in the history file. (Not available)" # TODO
+                "history --exec:<commandindex>":"Executes the command related to <commandindex> in the history file. ",
+                "history --clean":"Empties the history file."
             }
         })
 
     else:
-        t = table(["Index", "Command"])
 
         try:
             content = open(INIT_VARIABLES["history-file"], "r").read()
         except Exception as e:
             createErrorMessage(f"Cannot open history file in location '{INIT_VARIABLES['history-file']}' due to the following reason: '{e}'")
 
-        for index, line in enumerate(content.split("\n")):
-            t.addContent([index, line])
 
-        t.printTable()
+        if opts == {}:
+            t = table(["Index", "Command"], separator="|")
+            for index, line in enumerate(content.split("\n")):
+                t.addContent([index, line])
 
+            t.printTable()
+
+        elif "exec" in opts: 
+            target_index = 0
+            try:
+                target_index = int(opts["exec"])
+            except ValueError:
+                createErrorMessage("An integer was expected as index of the history.")
+                return
+            try:
+                executeLine(content.split("\n")[target_index])
+
+            except IndexError:
+                createErrorMessage("Cannot summon command from history, since the index specified was out of range.")
+
+        elif "clean" in opts:
+            try:
+                open(INIT_VARIABLES["history-file"], "w").write("")
+            except Exception as e:
+                createErrorMessage(f"Cannot clean history file at location '{INIT_VARIABLES['history-file']}' due to following reason: '{e}'")
 
 
 
@@ -1223,7 +1242,7 @@ def main():
             # Replace the special characters with the ones declared
             for c in userPromptChars:
                 if c in userPrompt:
-                    userPrompt = userPrompt.replace(c, str(userPromptChars[c])) # TODO Fix things becoming tuples
+                    userPrompt = userPrompt.replace(c, str(userPromptChars[c])) 
 
                 else:
                     continue
@@ -1242,6 +1261,7 @@ def main():
         if INIT_VARIABLES["separate-commands"] and userinput != "":
             print(len(userPrompt + pathPrompt)*colored("=", "green"))
             
+
 
 
 
