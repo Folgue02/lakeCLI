@@ -202,26 +202,30 @@ def resolveStringVariables(string:str, variables:dict) -> str:
 
 
 def getFileAttribs(targetFile):
-    targetAttribs = w.GetFileAttributes(targetFile)
+    if sys.platform == "win32":
+            targetAttribs = w.GetFileAttributes(targetFile)
 
-    attribs = {
-    wc.FILE_ATTRIBUTE_DIRECTORY:"D",
-    wc.FILE_ATTRIBUTE_ARCHIVE:"A",
-    wc.FILE_ATTRIBUTE_HIDDEN:"H",
-    wc.FILE_ATTRIBUTE_SYSTEM:"S",
-    wc.FILE_ATTRIBUTE_READONLY:"R"
-    }
-    result = ""
-    for a in attribs:
-        if a & targetAttribs:
-            result += attribs[a]
-        
-        else:
-            result += "-"
-                                                    
-    return result
+            attribs = {
+            wc.FILE_ATTRIBUTE_DIRECTORY:"D",
+            wc.FILE_ATTRIBUTE_ARCHIVE:"A",
+            wc.FILE_ATTRIBUTE_HIDDEN:"H",
+            wc.FILE_ATTRIBUTE_SYSTEM:"S",
+            wc.FILE_ATTRIBUTE_READONLY:"R"
+            }
+            result = ""
+            for a in attribs:
+                if a & targetAttribs:
+                    result += attribs[a]
+                
+                else:
+                    result += "-"
+                                                            
+            return result
 
-    
+    if sys.platform == "darwin" or sys.platform == "linux":
+        return "-UNKNOWN-"    
+
+
 class table:
     def __init__(self, rowTitles:list, separator:str=" "):
         self.rowTitles = rowTitles

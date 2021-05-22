@@ -32,7 +32,6 @@ from colorama import init
 init()
 
 
-
 # Header
 __version__ = 2.0
 __author__ = "Folgue02"
@@ -85,7 +84,8 @@ def executeLine(line):
             try:
                 open(INIT_VARIABLES["history-file"], "w").write(line + "\n")
             except Exception as e:
-                createErrorMessage(f"Cannot create history file in path '{INIT_VARIABLES['history-file']}' due to the following reason: '{e}'\n, You can disable file history with the command 'settings --change:save-history False'") 
+                createErrorMessage(f"Cannot create history file in path '{INIT_VARIABLES['history-file']}' due to the following reason: '{e}',\n History setting disabled, to re-enable this setting use this command: 'settings --change:save-history True'") 
+                INIT_VARIABLES["save-history"] = False
 
         else:
             oldContent = open(INIT_VARIABLES["history-file"], "r").read()
@@ -104,11 +104,8 @@ def executeLine(line):
     if userinput == []:
         pass
 
-
-
     # Decide what to do with the input
     else:
-
         command = userinput[0]
         args = [] if len(userinput) == 0 else userinput[1:]
 
@@ -154,7 +151,7 @@ def executeLine(line):
                     COMMANDS[command](args)
                 except Exception as e:
                     errorToDisplay = e if not INIT_VARIABLES["debug"] else traceback.format_exc()
-                    createErrorMessage(f"Exception triggered in built-in command.\nException: '{errorToDisplay}'")
+                    createErrorMessage(f"Exception triggered in built-in command. ('{command}')\nException: '{errorToDisplay}'")
 
             # Alias
             elif command in ADDON_COMMANDS["aliases"]:
@@ -174,7 +171,7 @@ def executeLine(line):
                     os.system(os.path.join(INIT_VARIABLES['addon-directory'], command, ADDON_COMMANDS["addons"][command]["entryFile"]) + " " + " ".join(args))
 
                 except Exception as e:
-                    createErrorMessage(f"Exception triggered in addon's command.\nException: '{e}'")
+                    createErrorMessage(f"Exception triggered in addon's command. ('{command}')\nException: '{e}'")
 
                 except KeyboardInterrupt:
                     createErrorMessage(f"Operation cancelled manually by user.")
@@ -207,7 +204,6 @@ def listdir(args):
     targetFolders = [os.getcwd()]
     
     pars, opts = parseArgs(args)
-
 
     # paths specified
     if pars != []:
@@ -258,10 +254,7 @@ def listdir(args):
         # Dirs
         if files != [] and not noFile and not simpleMode:
             for f in files:
-                try:
-                    attribs = getFileAttribs(os.path.join(directory, f))
-                except:
-                    attribs = "UNKNOWN"
+                attribs = getFileAttribs(os.path.join(directory, f))
                 
                 name = f
 
