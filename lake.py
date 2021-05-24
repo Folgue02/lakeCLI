@@ -1217,7 +1217,7 @@ def main():
 
     # Define user prompt special chars that will be replaced later
     userPromptChars = {
-        "%U":f"[ {getuser().upper()} ]",
+        "%U":f"[ {colored(getuser().upper(), 'green')} ]",
         "%u":getuser()
     }
     
