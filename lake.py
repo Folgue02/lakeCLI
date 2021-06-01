@@ -24,7 +24,6 @@ from time import ctime
 import ctypes
 import shutil
 import readline
-import re
 
 # Colors in the terminal
 from termcolor import colored
@@ -1217,7 +1216,7 @@ def main():
 
     # Define user prompt special chars that will be replaced later
     userPromptChars = {
-        "%U":f"[ {colored(getuser().upper(), 'green')} ]",
+        "%U":(f"[ {colored(getuser().upper(), 'green')} ]" if getuser() != 'root' else f"[ {colored(getuser().upper(), 'red')} ]") ,
         "%u":getuser()
     }
     
