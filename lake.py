@@ -23,7 +23,12 @@ import traceback
 from time import ctime
 import ctypes
 import shutil
-import readline
+
+# linux readline module
+if sys.platform != "win32":
+    import rlcompleter
+    import readline
+
 
 # Colors in the terminal
 from termcolor import colored
@@ -1204,7 +1209,8 @@ def main():
     os.system(f"title {INIT_VARIABLES['title']}") if sys.platform == "win32" else False
 
     # Disable readline module
-    if not INIT_VARIABLES["disable-readline"]: 
+    print(sys.platform)
+    if not INIT_VARIABLES["disable-readline"] and  sys.platform != "win32": # FIXME create support for tab completion in the prompt for windows 
         readline.parse_and_bind("tab: complete")
         readline.set_completer(completer)
 
