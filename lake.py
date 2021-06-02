@@ -52,7 +52,7 @@ INIT_VARIABLES = {
     "max-text-size":30, # Maximum length of the text displayed in tables
     "shell-execution-mode":False, # Activates the shell execution mode. (Commands that are not from lakeCLI are tried to be executed as shell commands)
     "disable-readline":False, # Disables the usage of the readline module when asking for userinput
-    "prompt":"%U%w# ", # Prompt to be displayed in the CLI
+    "prompt":"%U%W# ", # Prompt to be displayed in the CLI
     "save-history":True, # Save the commands used in a file, separated by lines
     "history-file":f"C:\\Users\\{getuser()}\\.lakeCLIAddons\\history.txt" if sys.platform ==  "win32" else f"/home/{getuser()}/.config/.lakeCLIAddons/history.txt", # File where the commands used will be saved.
     "addon-directory":f"C:\\Users\\{getuser()}\\.lakeCLIAddons" if sys.platform ==  "win32" else f"/home/{getuser()}/.config/.lakeCLIAddons", # Directory that contains the addons
