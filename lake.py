@@ -24,7 +24,7 @@ from time import ctime
 import ctypes
 import shutil
 
-# linux readline module
+# linux or darwin readline module
 if sys.platform != "win32":
     import rlcompleter
     import readline
@@ -425,7 +425,13 @@ def readFile(args):
 
                     if index % (len(content) //(len(content) // h)) == 0: 
                         print(f"(Page {0 if index == 0 else index // h}/{len(content)// h})<Enter>:", end="\r")
-                        waitForKey("\r") # Press enter
+                        
+                        # In case that the user wants to get out of the read command
+                        try:
+                            waitForKey("\r") # Press enter
+                        except KeyboardInterrupt:
+                            break
+
                         print(" "*len(f"(Page {0 if index == 0 else  index // h}/{len(content)// h})<Enter>:"), end="\r")# clean the line
                         print("\r" + line)
                         continue
@@ -457,7 +463,7 @@ def createDirectory(args):
             "usage":{
                 "mkdir <directory>":"Creates <directory>",
                 "mkdir <directory> --no-warning":"Tries to create <directory> and in case that it already exist the command will quit without displaying an error.",
-                "mkdir \"<directory0>/<directory1>/<directory2>\" --recursive":"Creates the directory <directory2> and its parents."
+                "mkdir \"<directory0>/<directory1>/<directory2>\" --recursive":"Creates the directory <directory2> and its parent directory."
             }
         })
 
@@ -503,7 +509,7 @@ def createDirectory(args):
                 os.mkdir(target)
             except FileNotFoundError:
                 createErrorMessage("The system cannot find the path, try using '--recursive'.")
-            
+
 
 
 
@@ -518,14 +524,14 @@ def removeDirectory(args):
             "usage":{
                 "rmdir <directory>":"Creates <directory>",
                 "rmdir <directory> --no-warning":"Tries to remove <directory> and in case that it doesn't exist the command will quit without displaying an error.",
-                "rmdir <directory> --no-empty":"Removes the directory even if its not empty."
+                "rmdir <directory> --no-empty/--recursive":"Removes the directory even if its not empty."
             }
         })
 
     if "no-warning" in opts:
         noWarningMode = True
 
-    if "no-empty" in opts:
+    if "no-empty" in opts or "recursive" in opts:
         noEmptyMode = True
 
     # Turn the parameters into a list of matches
@@ -607,12 +613,10 @@ def removeFile(args):
             except IOError as e:
                 createErrorMessage(f"The file '{file}' cannot be removed, probably because of permission issues.")
 
-
 def refreshAddons(args):
     # This function reads the addon configuration file
     global ADDON_COMMANDS
-    pars, opts = parseArgs(args)
-    
+    pars, opts = parseArgs(args)    
     
     if "help" in opts:
         createHelpText({
@@ -621,8 +625,6 @@ def refreshAddons(args):
                 "refresh":"Refreshes the addon configuration."
             }
         })
-    
-    
     
     if not os.path.isfile(INIT_VARIABLES['addon-file']):
         createErrorMessage(f"The addon configuration file doesn't exist. '{INIT_VARIABLES['addon-file']}'")
@@ -709,13 +711,13 @@ def printWorkingDirectory(args):
             "usage":{
                 "pwd":"Prints current directory.",
                 "pwd <directory>":"Prints information about <directory>",
-                "pwd --print-drive":"Prints the current drive. (Only works in windows)"
+                "pwd --print-drive":"Prints the current drive. (Only available in win32)"
             }
         })
 
     elif "print-drive" in opts:
         if sys.platform != "win32":
-            createErrorMessage("This parameter only works in windows.")
+            createErrorMessage(f"This parameter is only available in win32 (you are using '{sys.platform}').")
         else:
             print("Current drive: " + os.getcwd().replace("\\", "/").split("/")[0])
 
@@ -1213,7 +1215,6 @@ def main():
     if not INIT_VARIABLES["disable-readline"] and  sys.platform != "win32": # FIXME create support for tab completion in the prompt for windows 
         readline.parse_and_bind("tab: complete")
         readline.set_completer(completer)
-
     
     # Load the configuration file
     if INIT_VARIABLES["run-autorun"]:
@@ -1226,7 +1227,6 @@ def main():
         "%u":getuser()
     }
     
-
     # Main loop[ FOLGUE ]/home/folgue
     while True:
         try:
@@ -1259,11 +1259,5 @@ def main():
         if INIT_VARIABLES["separate-commands"] and userinput != "":
             print(len(userPrompt + pathPrompt)*colored("=", "green"))
             
-
-
-
-
-
 if __name__ == '__main__':
     main()    
-
