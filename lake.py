@@ -139,7 +139,7 @@ def executeLine(line):
                                 return
 
                 # If the function gets to this point, the command didnt exist
-                print(f"'{command}' its not related to any command.2")
+                print(f"'{command}' its not related to any command.")
 
             else:
                 print(f"'{command}' its not related to any command.")
