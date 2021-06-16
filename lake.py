@@ -95,6 +95,7 @@ def executeLine(line):
             oldContent = open(INIT_VARIABLES["history-file"], "r").read()
             open(INIT_VARIABLES["history-file"], "w").write(oldContent + line + "\n")
 
+    # Parse the userinput, resolving variables in the string
     for segment in userinput:
         try:
             parsedResult.append(resolveStringVariables(segment, VARIABLES))
@@ -144,10 +145,6 @@ def executeLine(line):
             else:
                 print(f"'{command}' its not related to any command.")
 
-
-
-
-
         else:
             # Builtin command
             if command in COMMANDS:
@@ -156,6 +153,9 @@ def executeLine(line):
                 except Exception as e:
                     errorToDisplay = e if not INIT_VARIABLES["debug"] else traceback.format_exc()
                     createErrorMessage(f"Exception triggered in built-in command. ('{command}')\nException: '{errorToDisplay}'")
+                
+                except KeyboardInterrupt:
+                    createWarnMessage("Command execution stopped manually by user. (Ctrl+C)")
 
             # Alias
             elif command in ADDON_COMMANDS["aliases"]:
@@ -378,9 +378,6 @@ def readFile(args):
             }
         })
 
-    if "pause" in opts:
-        pauseMode = True
-
     targets = []
     for x in pars:
         results = returnFileMatches(x)
@@ -403,7 +400,7 @@ def readFile(args):
 
 
             # Print the content
-            if pauseMode:
+            if "pause" in opts:
                 h = os.get_terminal_size()[1] 
                 try:
                     content = open(file, "r").read().split("\n")
@@ -421,8 +418,6 @@ def readFile(args):
                     return
 
                 for index, line in enumerate(content):
-
-
                     if index % (len(content) //(len(content) // h)) == 0: 
                         print(f"(Page {0 if index == 0 else index // h}/{len(content)// h})<Enter>:", end="\r")
                         

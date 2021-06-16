@@ -82,7 +82,11 @@ def waitForKey(key):
             input("")
             break
         else:
-            char = getch().decode("utf-8")
+            try:
+                char = getch().decode("utf-8")
+            except Exception: # In case of not being able to decode into utf-8 char
+                return 
+
             if char.lower() == key.lower():
                 break
 
