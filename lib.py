@@ -12,13 +12,13 @@ if sys.platform == "win32":
 else:
     import keyboard
 
-def createLogMessage(msg):
+def createLogMessage(msg: str):
     print(colored("LOG: ", "green") + f"{msg}")
 
-def createWarningMessage(msg):
+def createWarningMessage(msg: str):
     print(colored(f"WARNING: ", "yellow") +  f"{msg}")
 
-def createErrorMessage(msg):
+def createErrorMessage(msg: str):
     print(colored(f"ERROR: ", "red") + f"{msg}")
 
 
