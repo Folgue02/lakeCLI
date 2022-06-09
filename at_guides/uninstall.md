@@ -2,7 +2,7 @@
 
 ## Command example
 ```cmd
-at remove theaddontoremove
+at remove theaddontoberemove
 
 ```
 
