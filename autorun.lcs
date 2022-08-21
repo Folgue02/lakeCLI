@@ -10,7 +10,7 @@ echo "v$version$" " " " "
 
 echo ""
 
-echo " * Machine's operative system: $platform$"
+echo " * Machine's operating system: $platform$"
 echo " * Current user:               $user$"
 echo " * Python version:             $pyVersion$"
 echo " * CLI version:                $version$"
